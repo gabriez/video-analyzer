@@ -4,6 +4,7 @@
   "description": "Express Template - Gabriel Torres gabrieltorres2014@gmail.com",
   "license": "ISC",
   "author": "Gabriel Torres",
+  "packageManager": "pnpm@10.33.0",
   "type": "module",
   "main": "index.js",
   "scripts": {
@@ -26,7 +27,7 @@
     "migration:revert": "tsx ./node_modules/typeorm/cli.js migration:revert -d ./src/database/appDataSource.ts",
     "migration:run": "tsx ./node_modules/typeorm/cli.js migration:run -d ./src/database/appDataSource.ts",
     "migration:show": "tsx ./node_modules/typeorm/cli.js migration:show -d ./src/database/appDataSource.ts",
-    "prepare": "husky"
+    "prepare": "test -d .git && husky || true"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",

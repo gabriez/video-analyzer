@@ -6,13 +6,13 @@ Verify the multi-container topology (`app`, `worker`, `speaches`), file sharing 
 
 ## Requirements
 
-- Build containers with `docker compose build`.
-- Verify services startup with `docker compose up -d`.
-- Validate network resolution between containers:
+- [x] Build containers with `docker compose build`.
+- [x] Verify services startup with `docker compose up -d`.
+- [x] Validate network resolution between containers:
   - `app` and `worker` reach `speaches:8000`.
   - `app` and `worker` share `/app/data` (SQLite database) and `/app/temp`.
-- Verify SQLite WAL files (`database.sqlite`, `database.sqlite-wal`, `database.sqlite-shm`) function without lock errors under concurrent access.
-- Execute sanity healthcheck request:
+- [x] Verify SQLite WAL files (`database.sqlite`, `database.sqlite-wal`, `database.sqlite-shm`) function without lock errors under concurrent access.
+- [x] Execute sanity healthcheck request:
 
   ```bash
   curl -X POST http://localhost:3000/api/v1/analyze \
@@ -20,4 +20,4 @@ Verify the multi-container topology (`app`, `worker`, `speaches`), file sharing 
     -H "Content-Type: application/json" \
     -d '{"telegramId":"test-user","url":"https://example.com/test.mp4"}'
   ```
-- Confirm worker picks up the job and dispatches webhook.
+- [x] Confirm worker picks up the job and dispatches webhook.

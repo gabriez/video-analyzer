@@ -43,6 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 RUN pnpm install --prod --frozen-lockfile
+RUN cd $(find node_modules/.pnpm -name "sqlite3@*" -type d)/node_modules/sqlite3 && npx --yes node-gyp rebuild
 
 COPY --from=build /app/dist ./dist
 

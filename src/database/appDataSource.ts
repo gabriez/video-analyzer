@@ -18,6 +18,14 @@ export async function initializeDatabase(): Promise<DataSource> {
     await AppDataSource.query("PRAGMA journal_mode = WAL;");
     await AppDataSource.query("PRAGMA busy_timeout = 5000;");
     await AppDataSource.query("PRAGMA synchronous = NORMAL;");
+
+    const existingTables = (await AppDataSource.query("SELECT name FROM sqlite_master WHERE type='table' AND name='resumes';")) as Array<{
+      name: string;
+    }>;
+
+    if (!existingTables || existingTables.length === 0) {
+      await AppDataSource.synchronize();
+    }
   }
   return AppDataSource;
 }
