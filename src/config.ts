@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Config } from "./types/config.js";
 
 const booleanEnvSchema = z
   .union([z.boolean(), z.string()])
@@ -45,7 +46,7 @@ export const configSchema = z.object({
   MAX_CONCURRENT_JOBS: z.coerce.number().int().positive().default(3),
 });
 
-export type Config = z.infer<typeof configSchema>;
+export type { Config } from "./types/config.js";
 
 export function createConfig(env: Record<string, string | undefined> = process.env): Config {
   return configSchema.parse(env);

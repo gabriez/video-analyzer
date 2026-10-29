@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { OpenAI } from "openai";
 
 import { getConfig } from "../config.js";
+import type { VisionAnalysisOptions } from "../types/vision.js";
 
 export class VisionAnalysisError extends Error {
   constructor(
@@ -13,12 +14,7 @@ export class VisionAnalysisError extends Error {
   }
 }
 
-export interface VisionAnalysisOptions {
-  transcription: string | null;
-  framePaths: string[];
-  apiKey?: string;
-  model?: string;
-}
+export type { VisionAnalysisOptions } from "../types/vision.js";
 
 const SYSTEM_PROMPT = `You are an expert video summarizer and multimodal analyst.
 Analyze the provided sequence of sampled video frames alongside any audio transcription text.

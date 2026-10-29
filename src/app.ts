@@ -2,10 +2,9 @@ import express, { type Express, type NextFunction, type Request, type Response }
 
 import { getConfig } from "./config.js";
 import { createApiRouter } from "./routes/index.js";
+import type { AppOptions } from "./types/app.js";
 
-export interface AppOptions {
-  bearerToken?: string;
-}
+export type { AppOptions } from "./types/app.js";
 
 /**
  * Creates and configures the Express application instance.

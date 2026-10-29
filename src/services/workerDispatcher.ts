@@ -6,6 +6,7 @@ import { getConfig } from "../config.js";
 import AppDataSource from "../database/appDataSource.js";
 import { ResumeEntity } from "../database/entities/ResumeEntity.js";
 import { ResumeStatus } from "../types/resume.js";
+import type { JobProcessorServices, ProcessJobOptions, WorkerDispatcherOptions } from "../types/worker.js";
 import { downloadVideo } from "./downloader.js";
 import { extractAudio, extractFrames } from "./mediaExtractor.js";
 import { hasAudioStream } from "./mediaProbe.js";
@@ -13,15 +14,11 @@ import { transcribeAudio } from "./sttService.js";
 import { analyzeVideoContext } from "./visionService.js";
 import { sendWebhookNotification } from "./webhookService.js";
 
-export interface JobProcessorServices {
-  downloadVideo: typeof downloadVideo;
-  hasAudioStream: typeof hasAudioStream;
-  extractAudio: typeof extractAudio;
-  transcribeAudio: typeof transcribeAudio;
-  extractFrames: typeof extractFrames;
-  analyzeVideoContext: typeof analyzeVideoContext;
-  sendWebhookNotification: typeof sendWebhookNotification;
-}
+export type {
+  JobProcessorServices,
+  ProcessJobOptions,
+  WorkerDispatcherOptions,
+} from "../types/worker.js";
 
 export const defaultJobProcessorServices: JobProcessorServices = {
   downloadVideo,
@@ -32,12 +29,6 @@ export const defaultJobProcessorServices: JobProcessorServices = {
   analyzeVideoContext,
   sendWebhookNotification,
 };
-
-export interface ProcessJobOptions {
-  dataSource?: DataSource;
-  tempDir?: string;
-  services?: JobProcessorServices;
-}
 
 /**
  * Claims the next pending job atomically using SQLite WAL transaction semantics.
@@ -202,14 +193,6 @@ export async function processJob(job: ResumeEntity, options: ProcessJobOptions =
       }
     }
   }
-}
-
-export interface WorkerDispatcherOptions {
-  dataSource?: DataSource;
-  maxConcurrency?: number;
-  tempDir?: string;
-  services?: JobProcessorServices;
-  pollIntervalMs?: number;
 }
 
 /**

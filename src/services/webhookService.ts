@@ -1,6 +1,7 @@
 import axios, { AxiosError } from "axios";
 
 import { getConfig } from "../config.js";
+import type { WebhookDeliveryOptions, WebhookDeliveryResult, WebhookPayload } from "../types/webhook.js";
 
 export class WebhookDeliveryError extends Error {
   constructor(
@@ -12,31 +13,11 @@ export class WebhookDeliveryError extends Error {
   }
 }
 
-export interface WebhookPayload {
-  jobId: string;
-  telegramId: string;
-  videoUrl: string;
-  hasTranscription: boolean;
-  transcription: string | null;
-  summary: string;
-  completedAt: string;
-}
-
-export interface WebhookDeliveryResult {
-  success: boolean;
-  attempts: number;
-}
-
-export interface WebhookDeliveryOptions {
-  webhookUrl?: string;
-  authHeader?: string;
-  authToken?: string;
-  maxAttempts?: number;
-  baseDelayMs?: number;
-  maxDelayMs?: number;
-  requestTimeoutMs?: number;
-  sleepFn?: (ms: number) => Promise<void>;
-}
+export type {
+  WebhookDeliveryOptions,
+  WebhookDeliveryResult,
+  WebhookPayload,
+} from "../types/webhook.js";
 
 const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 

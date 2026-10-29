@@ -10,7 +10,7 @@ export const analyzeRequestSchema = z.object({
   url: z.string().url("A valid video URL is required"),
 });
 
-export type AnalyzeRequest = z.infer<typeof analyzeRequestSchema>;
+export type { AnalyzeRequest } from "../types/api.js";
 
 /**
  * Controller handling video analysis job submissions.

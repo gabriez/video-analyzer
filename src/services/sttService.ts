@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { OpenAI } from "openai";
 
 import { getConfig } from "../config.js";
+import type { STTOptions } from "../types/stt.js";
 
 export class TranscriptionError extends Error {
   constructor(
@@ -13,9 +14,7 @@ export class TranscriptionError extends Error {
   }
 }
 
-export interface STTOptions {
-  whisperUrl?: string;
-}
+export type { STTOptions } from "../types/stt.js";
 
 /**
  * Transcribes an audio file using Speaches / Whisper via the OpenAI-compatible transcription endpoint.

@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import type { DownloadOptions } from "../types/downloader.js";
+
 const execFileAsync = promisify(execFile);
 
 export class DownloadError extends Error {
@@ -25,9 +27,7 @@ export class DownloadTimeoutError extends DownloadError {
   }
 }
 
-export interface DownloadOptions {
-  timeoutMs?: number;
-}
+export type { DownloadOptions } from "../types/downloader.js";
 
 const DEFAULT_TIMEOUT_MS = 180_000; // 3 minutes max
 
