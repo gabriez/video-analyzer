@@ -25,10 +25,10 @@ Implement zero-mock media inspection and extraction services using real native `
   - `video_with_audio_5s.mp4` (sine wave audio + testsrc video).
   - `video_silent_5s.mp4` (testsrc video only, no audio stream).
   - `corrupt_video.mp4` (truncated dummy bytes).
-- [ ] `hasAudioStream` returns `true` for `video_with_audio_5s.mp4`.
-- [ ] `hasAudioStream` returns `false` for `video_silent_5s.mp4`.
-- [ ] `hasAudioStream` throws `MediaProbeError` for `corrupt_video.mp4`.
-- [ ] `extractAudio` generates playable mono MP3 file from video with audio.
-- [ ] `extractFrames` with `fps = "1/1.5"` generates 3 to 4 JPEG files.
-- [ ] `extractFrames` with `fps = "1"` generates 5 JPEG files.
-- [ ] Extraction on corrupt file throws error without leaving unmanaged orphan processes.
+- [x] `hasAudioStream` returns `true` for `video_with_audio_5s.mp4`.
+- [x] `hasAudioStream` returns `false` for `video_silent_5s.mp4`.
+- [x] `hasAudioStream` throws `MediaProbeError` for `corrupt_video.mp4`.
+- [x] `extractAudio` generates playable mono MP3 file from video with audio.
+- [x] `extractFrames` with `fps = "1/1.5"` generates 3 to 4 JPEG files.
+- [x] `extractFrames` with `fps = "1"` generates 5 JPEG files.
+- [x] Extraction on corrupt file throws error without leaving unmanaged orphan processes.
