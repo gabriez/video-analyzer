@@ -34,7 +34,7 @@ Implement a resilient webhook dispatcher that posts the final video analysis sum
 
 ## Tests to Implement (`src/__tests__/webhook.spec.ts`)
 
-- [ ] Successfully delivers payload on first attempt (200 OK) with auth headers.
-- [ ] Retries with backoff when receiving 500/503 and succeeds on subsequent attempt.
-- [ ] Exhausts retries when target persistently responds with 500 or times out.
-- [ ] Respects custom timeout per HTTP request.
+- [x] Successfully delivers payload on first attempt (200 OK) with auth headers.
+- [x] Retries with backoff when receiving 500/503 and succeeds on subsequent attempt.
+- [x] Exhausts retries when target persistently responds with 500 or times out.
+- [x] Respects custom timeout per HTTP request.
