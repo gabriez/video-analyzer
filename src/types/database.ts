@@ -1,4 +1,5 @@
 import type { ResumeEntity } from "../database/entities/ResumeEntity.js";
+import type { ResumeEntityDTO } from "./resume.js";
 
 export interface CreateResumeData {
   telegramId: string;
@@ -13,7 +14,7 @@ export interface MarkProcessedData {
 
 export interface IResumeDatabaseService {
   createAndSave(data: CreateResumeData): Promise<ResumeEntity>;
-  claimNextPending(): Promise<ResumeEntity | null>;
+  claimNextPending(): Promise<ResumeEntityDTO | null>;
   markProcessed(id: number, data: MarkProcessedData): Promise<ResumeEntity>;
   markSent(id: number, deliveredAt: Date): Promise<ResumeEntity>;
   markFailed(id: number, errorMessage: string): Promise<ResumeEntity>;

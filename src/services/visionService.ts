@@ -21,7 +21,9 @@ Analyze the provided sequence of sampled video frames alongside any audio transc
 Provide a clear, cohesive, structured summary in Markdown format highlighting:
 - The main topic and key takeaways
 - Step-by-step actions or narrative flow observed
-- Important visual or textual details shown in the video`;
+- Important visual or textual details shown in the video
+Response must in Spanish.
+`;
 
 /**
  * Analyzes video visual frames and audio transcription using OpenRouter multimodal models.

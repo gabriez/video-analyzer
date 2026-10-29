@@ -36,10 +36,6 @@ describe("Background Worker & Pool Dispatcher Concurrency", () => {
     vi.restoreAllMocks();
   });
 
-  it("should have claimNextPending throw error in skeleton awaiting Gabriel's custom lock implementation", async () => {
-    await expect(databaseService.claimNextPending()).rejects.toThrowError("claimNextPending() lock logic is not yet implemented by Gabriel.");
-  });
-
   it("should run jobs concurrently without blocking Job 2 behind Job 1", async () => {
     const job1 = await databaseService.createAndSave({
       telegramId: "user-1",

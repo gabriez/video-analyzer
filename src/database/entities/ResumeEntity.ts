@@ -21,7 +21,7 @@ export class ResumeEntity extends CoreEntity {
   @Column({
     enum: ResumeStatus,
     type: "simple-enum",
-    default: ResumeStatus.InProgress,
+    default: ResumeStatus.Created,
   })
   status!: ResumeStatus;
 

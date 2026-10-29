@@ -3,7 +3,7 @@ import type { DataSource, Repository } from "typeorm";
 import AppDataSource from "../../database/appDataSource.js";
 import { ResumeEntity } from "../../database/entities/ResumeEntity.js";
 import type { CreateResumeData, IResumeDatabaseService, MarkProcessedData } from "../../types/database.js";
-import { ResumeStatus } from "../../types/resume.js";
+import { type RawResumeEntity, type ResumeEntityDTO, ResumeStatus } from "../../types/resume.js";
 
 /**
  * Service handling all database operations for ResumeEntity.
@@ -12,9 +12,11 @@ import { ResumeStatus } from "../../types/resume.js";
  */
 export class ResumeDatabaseService implements IResumeDatabaseService {
   private readonly repository: Repository<ResumeEntity>;
+  private readonly dataSource: DataSource;
 
   constructor(dataSource: DataSource = AppDataSource) {
     this.repository = dataSource.getRepository(ResumeEntity);
+    this.dataSource = dataSource;
   }
 
   /**
@@ -24,7 +26,7 @@ export class ResumeDatabaseService implements IResumeDatabaseService {
     const entity = this.repository.create({
       telegramId: data.telegramId,
       videoUrl: data.videoUrl,
-      status: ResumeStatus.InProgress,
+      status: ResumeStatus.Created,
     });
     return await this.repository.save(entity);
   }
@@ -33,10 +35,31 @@ export class ResumeDatabaseService implements IResumeDatabaseService {
    * Claims the next pending job atomically using lock logic.
    * NOTE (Gabriel): Skeleton left here for custom atomic locking implementation.
    */
-  async claimNextPending(): Promise<ResumeEntity | null> {
-    // TODO (Gabriel): Implement your custom lock logic here.
-    // Example: queryRunner transaction, atomic UPDATE ... RETURNING, or custom SQLite mutex lock.
-    throw new Error("claimNextPending() lock logic is not yet implemented by Gabriel.");
+  async claimNextPending(): Promise<ResumeEntityDTO | null> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+
+    // En SQLite WAL mode, BEGIN IMMEDIATE bloquea escrituras concurrentes de inmediato
+    await queryRunner.query("BEGIN IMMEDIATE;");
+    try {
+      const rows = await queryRunner.query("SELECT id FROM resumes WHERE status = 'created' ORDER BY create_at ASC LIMIT 1;");
+      if (!rows || rows.length === 0) {
+        await queryRunner.query("COMMIT;");
+        return null;
+      }
+
+      const id = rows[0].id;
+      await queryRunner.query("UPDATE resumes SET status = 'in_progress', locked_at = CURRENT_TIMESTAMP WHERE id = ?;", [id]);
+      await queryRunner.query("COMMIT;");
+
+      const entity = await this.findById(id);
+      return entity ? fromSqlToEntity(entity as unknown as RawResumeEntity) : null;
+    } catch (err) {
+      await queryRunner.query("ROLLBACK;");
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   /**
@@ -130,4 +153,21 @@ export function getResumeDatabaseService(dataSource: DataSource = AppDataSource)
     defaultResumeDatabaseService = new ResumeDatabaseService(dataSource);
   }
   return defaultResumeDatabaseService;
+}
+
+function fromSqlToEntity(rawEntity: RawResumeEntity): ResumeEntityDTO {
+  return {
+    id: rawEntity.id,
+    content: rawEntity.content,
+    deliveryAttempts: rawEntity.delivery_attempts,
+    status: rawEntity.status,
+    telegramId: rawEntity.telegram_id,
+    transcription: rawEntity.transcription,
+    videoUrl: rawEntity.video_url,
+    deliveredAt: rawEntity.delivered_at,
+    errorMessage: rawEntity.error_message,
+    hasAudio: rawEntity.has_audio,
+    lockedAt: rawEntity.locked_at,
+    nextDeliveryRetryAt: rawEntity.next_delivery_retry_at,
+  };
 }

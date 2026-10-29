@@ -72,7 +72,7 @@ describe("HTTP API Endpoints - POST /api/v1/analyze", () => {
       message: string;
     };
 
-    expect(body.status).toBe(ResumeStatus.InProgress);
+    expect(body.status).toBe(ResumeStatus.Created);
     expect(body.message).toBe("Video queued for analysis");
     expect(body.jobId).toBeDefined();
 
@@ -82,7 +82,7 @@ describe("HTTP API Endpoints - POST /api/v1/analyze", () => {
     expect(savedEntity).toBeDefined();
     expect(savedEntity?.telegramId).toBe("tg-user-777");
     expect(savedEntity?.videoUrl).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
-    expect(savedEntity?.status).toBe(ResumeStatus.InProgress);
+    expect(savedEntity?.status).toBe(ResumeStatus.Created);
   });
 
   it("should return 400 Bad Request with structured errors when url is missing or not a valid URL", async () => {

@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { getConfig } from "../config.js";
-import type { ResumeEntity } from "../database/entities/ResumeEntity.js";
 import type { AiClients } from "../types/ai.js";
 import type { IResumeDatabaseService } from "../types/database.js";
+import type { ResumeEntityDTO } from "../types/resume.js";
 import type { JobProcessorServices, ProcessJobOptions, WorkerDispatcherOptions } from "../types/worker.js";
 import { getAiClients } from "./aiClients.js";
 import { getResumeDatabaseService } from "./database/resumeDatabaseService.js";
@@ -42,7 +42,7 @@ export const defaultJobProcessorServices: JobProcessorServices = {
  * 7. State updates via injected database service
  * 8. Guaranteed per-job directory cleanup
  */
-export async function processJob(job: ResumeEntity, options: ProcessJobOptions = {}): Promise<void> {
+export async function processJob(job: ResumeEntityDTO, options: ProcessJobOptions = {}): Promise<void> {
   const databaseService = options.databaseService ?? getResumeDatabaseService();
   const services = options.services ?? defaultJobProcessorServices;
   const aiClients = options.aiClients ?? getAiClients();
@@ -221,7 +221,7 @@ export class WorkerDispatcher {
     }
   }
 
-  private dispatchJob(job: ResumeEntity): void {
+  private dispatchJob(job: ResumeEntityDTO): void {
     const jobPromise: Promise<void> = processJob(job, {
       databaseService: this.databaseService,
       aiClients: this.aiClients,
