@@ -13,9 +13,35 @@ services:
       - DB_LOGGING=false
       - DB_SYNCHRONIZE=false
       - WHISPER_URL=http://speaches:8000/v1
+      - API_BEARER_TOKEN=${API_BEARER_TOKEN:-secret-lan-token}
     volumes:
       - app-data:/app/data
+      - app-temp:/app/temp
     depends_on:
+      - speaches
+    networks:
+      - video-network
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: video-analyzer-worker
+    restart: unless-stopped
+    command: ["node", "dist/src/worker.js"]
+    environment:
+      - DB_DATABASE=/app/data/database.sqlite
+      - DB_LOGGING=false
+      - DB_SYNCHRONIZE=false
+      - WHISPER_URL=http://speaches:8000/v1
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-google/gemini-2.5-flash}
+      - TEMP_DIR=/app/temp
+    volumes:
+      - app-data:/app/data
+      - app-temp:/app/temp
+    depends_on:
+      - app
       - speaches
     networks:
       - video-network
@@ -37,4 +63,5 @@ networks:
 
 volumes:
   app-data:
+  app-temp:
   speaches-cache:

@@ -1,5 +1,5 @@
 import { Column, Entity } from "typeorm";
-import { ResumeStatus } from "#types/resume.js";
+import { ResumeStatus } from "../../types/resume.js";
 import { CoreEntity } from "./CoreEntity.js";
 
 @Entity()
