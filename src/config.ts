@@ -1,9 +1,11 @@
 export class Config {
   port: string;
   whisper_url: string;
+  dbDatabase: string;
   constructor() {
     this.port = process.env.PORT ?? "3000";
-    this.whisper_url = process.env.WHISPER_URL ?? "localhost:9000/v1/";
+    this.whisper_url = process.env.WHISPER_URL ?? "speaches:8000/v1/";
+    this.dbDatabase = process.env.DB_DATABASE ?? "database.sqlite";
   }
 
   requireEnv(name: string): string {

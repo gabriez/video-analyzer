@@ -1,0 +1,40 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: video-analyzer-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DB_DATABASE=/app/data/database.sqlite
+      - DB_LOGGING=false
+      - DB_SYNCHRONIZE=false
+      - WHISPER_URL=http://speaches:8000/v1
+    volumes:
+      - app-data:/app/data
+    depends_on:
+      - speaches
+    networks:
+      - video-network
+
+  speaches:
+    image: ghcr.io/speaches-ai/speaches:latest-cpu
+    container_name: video-analyzer-speaches
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - speaches-cache:/root/.cache/huggingface
+    networks:
+      - video-network
+
+networks:
+  video-network:
+    driver: bridge
+
+volumes:
+  app-data:
+  speaches-cache:
