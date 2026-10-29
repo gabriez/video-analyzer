@@ -13,29 +13,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: npm run test:run
+        run: pnpm run test:run
 
       - name: Run TypeScript type checking
-        run: npm run type-check
+        run: pnpm run type-check
 
-      - name: Run ESLint and fix
-        run: npm run lint:fix
+      - name: Run Biome check
+        run: pnpm run lint
 
-      - name: Format with Prettier
-        run: npm run format
-
-      - name: Check for remaining ESLint errors
-        run: npm run lint
-
-      - name: Check for remaining formatting issues
-        run: npm run format:check
+      - name: Run Biome formatting check
+        run: pnpm run format:check
