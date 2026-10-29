@@ -29,7 +29,7 @@ export function createApp(options: AppOptions = {}): Express {
   });
 
   // API Routes
-  app.use("/api", createApiRouter(token));
+  app.use("/api", createApiRouter(token, options.databaseService));
 
   // Global Error Handler
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction): void => {

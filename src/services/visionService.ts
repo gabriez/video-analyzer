@@ -31,25 +31,34 @@ Provide a clear, cohesive, structured summary in Markdown format highlighting:
  * @throws VisionAnalysisError if API fails, rate limits, or frames are missing/unreadable
  */
 export async function analyzeVideoContext(options: VisionAnalysisOptions): Promise<string> {
-  let apiKey = options.apiKey;
+  let client = options.client;
   let model = options.model;
 
-  if (!apiKey || !model) {
-    try {
-      const config = getConfig();
-      apiKey = apiKey ?? config.OPENROUTER_API_KEY;
-      model = model ?? config.OPENROUTER_MODEL;
-    } catch (err) {
-      if (!apiKey) {
+  if (!client) {
+    let apiKey = options.apiKey;
+    if (!apiKey) {
+      try {
+        const config = getConfig();
+        apiKey = config.OPENROUTER_API_KEY;
+        model = model ?? config.OPENROUTER_MODEL;
+      } catch (err) {
         throw new VisionAnalysisError("OpenRouter API key is required but not provided or configured in environment", err);
       }
     }
+
+    client = new OpenAI({
+      baseURL: "https://openrouter.ai/api/v1",
+      apiKey,
+    });
   }
 
-  const client = new OpenAI({
-    baseURL: "https://openrouter.ai/api/v1",
-    apiKey,
-  });
+  if (!model) {
+    try {
+      model = getConfig().OPENROUTER_MODEL;
+    } catch {
+      model = "google/gemini-2.5-flash";
+    }
+  }
 
   const contentParts: Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> = [];
 

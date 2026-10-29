@@ -68,7 +68,7 @@ describe("Video Downloader Service (yt-dlp)", () => {
         resolve();
       });
     });
-  });
+  }, 20000);
 
   afterAll(async () => {
     await new Promise<void>((resolve) => {

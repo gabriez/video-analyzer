@@ -2,6 +2,8 @@ import "reflect-metadata";
 
 import { getConfig } from "./config.js";
 import AppDataSource, { initializeDatabase } from "./database/appDataSource.js";
+import { getAiClients } from "./services/aiClients.js";
+import { getResumeDatabaseService } from "./services/database/resumeDatabaseService.js";
 import { WorkerDispatcher } from "./services/workerDispatcher.js";
 
 async function main() {
@@ -12,8 +14,13 @@ async function main() {
     await initializeDatabase();
     console.log("Worker database connected successfully (SQLite WAL mode)");
 
+    // Persistent clients and database service instance
+    const databaseService = getResumeDatabaseService(AppDataSource);
+    const aiClients = getAiClients();
+
     const dispatcher = new WorkerDispatcher({
-      dataSource: AppDataSource,
+      databaseService,
+      aiClients,
       maxConcurrency: config.MAX_CONCURRENT_JOBS,
       tempDir: config.TEMP_DIR,
     });

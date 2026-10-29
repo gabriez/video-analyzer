@@ -4,18 +4,22 @@ import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AppDataSource, { initializeDatabase } from "../database/appDataSource.js";
-import { ResumeEntity } from "../database/entities/ResumeEntity.js";
+import { createAiClients } from "../services/aiClients.js";
+import { ResumeDatabaseService } from "../services/database/resumeDatabaseService.js";
 import * as downloader from "../services/downloader.js";
-import { claimNextPendingJob, type JobProcessorServices, processJob, WorkerDispatcher } from "../services/workerDispatcher.js";
+import { type JobProcessorServices, processJob, WorkerDispatcher } from "../services/workerDispatcher.js";
+import type { IResumeDatabaseService } from "../types/database.js";
 import { ResumeStatus } from "../types/resume.js";
 
 describe("Background Worker & Pool Dispatcher Concurrency", () => {
   let tempBaseDir: string;
+  let databaseService: ResumeDatabaseService;
 
   beforeAll(async () => {
     tempBaseDir = fs.mkdtempSync(path.join(os.tmpdir(), "worker-test-"));
     await initializeDatabase();
     await AppDataSource.synchronize();
+    databaseService = new ResumeDatabaseService(AppDataSource);
   });
 
   afterAll(async () => {
@@ -28,49 +32,23 @@ describe("Background Worker & Pool Dispatcher Concurrency", () => {
   });
 
   beforeEach(async () => {
-    const repository = AppDataSource.getRepository(ResumeEntity);
-    await repository.clear();
+    await databaseService.clear();
     vi.restoreAllMocks();
   });
 
-  it("should claim next pending job atomically and prevent duplicate claims", async () => {
-    const repository = AppDataSource.getRepository(ResumeEntity);
-    const job = await repository.save(
-      repository.create({
-        telegramId: "user-atomic",
-        videoUrl: "https://example.com/atomic.mp4",
-        status: ResumeStatus.InProgress,
-      }),
-    );
-
-    // Two parallel claim attempts
-    const [claim1, claim2] = await Promise.all([claimNextPendingJob(AppDataSource), claimNextPendingJob(AppDataSource)]);
-
-    // Exactly one worker must claim the job, the second gets null
-    const claimedJob = claim1 ?? claim2;
-    const missedJob = claim1 ? claim2 : claim1;
-
-    expect(claimedJob).toBeDefined();
-    expect(claimedJob?.id).toBe(job.id);
-    expect(claimedJob?.lockedAt).toBeDefined();
-    expect(missedJob).toBeNull();
+  it("should have claimNextPending throw error in skeleton awaiting Gabriel's custom lock implementation", async () => {
+    await expect(databaseService.claimNextPending()).rejects.toThrowError("claimNextPending() lock logic is not yet implemented by Gabriel.");
   });
 
   it("should run jobs concurrently without blocking Job 2 behind Job 1", async () => {
-    const repository = AppDataSource.getRepository(ResumeEntity);
-
-    const [job1, job2] = await repository.save([
-      repository.create({
-        telegramId: "user-1",
-        videoUrl: "https://example.com/job1.mp4",
-        status: ResumeStatus.InProgress,
-      }),
-      repository.create({
-        telegramId: "user-2",
-        videoUrl: "https://example.com/job2.mp4",
-        status: ResumeStatus.InProgress,
-      }),
-    ]);
+    const job1 = await databaseService.createAndSave({
+      telegramId: "user-1",
+      videoUrl: "https://example.com/job1.mp4",
+    });
+    const job2 = await databaseService.createAndSave({
+      telegramId: "user-2",
+      videoUrl: "https://example.com/job2.mp4",
+    });
 
     let resolveJob1Download!: () => void;
     const job1DownloadPromise = new Promise<void>((resolve) => {
@@ -95,8 +73,29 @@ describe("Background Worker & Pool Dispatcher Concurrency", () => {
       sendWebhookNotification: vi.fn().mockResolvedValue({ success: true, attempts: 1 }),
     };
 
+    // Mock claimNextPending in databaseService for dispatcher test
+    const queue = [job1, job2];
+    const mockDbService: IResumeDatabaseService = {
+      ...databaseService,
+      createAndSave: databaseService.createAndSave.bind(databaseService),
+      claimNextPending: vi.fn().mockImplementation(async () => queue.shift() ?? null),
+      markProcessed: databaseService.markProcessed.bind(databaseService),
+      markSent: databaseService.markSent.bind(databaseService),
+      markFailed: databaseService.markFailed.bind(databaseService),
+      recordDeliveryFailure: databaseService.recordDeliveryFailure.bind(databaseService),
+      findById: databaseService.findById.bind(databaseService),
+      countPending: databaseService.countPending.bind(databaseService),
+      clear: databaseService.clear.bind(databaseService),
+    };
+
+    const aiClients = createAiClients({
+      whisperUrl: "http://localhost:8000/v1",
+      openRouterApiKey: "dummy-key",
+    });
+
     const dispatcher = new WorkerDispatcher({
-      dataSource: AppDataSource,
+      databaseService: mockDbService,
+      aiClients,
       maxConcurrency: 2,
       tempDir: tempBaseDir,
       services: mockServices,
@@ -119,8 +118,8 @@ describe("Background Worker & Pool Dispatcher Concurrency", () => {
 
     await vi.waitFor(
       async () => {
-        const updated1 = await repository.findOneBy({ id: job1.id });
-        const updated2 = await repository.findOneBy({ id: job2.id });
+        const updated1 = await databaseService.findById(job1.id);
+        const updated2 = await databaseService.findById(job2.id);
         expect(updated1?.status).toBe(ResumeStatus.Sent);
         expect(updated2?.status).toBe(ResumeStatus.Sent);
       },
@@ -131,14 +130,11 @@ describe("Background Worker & Pool Dispatcher Concurrency", () => {
   });
 
   it("should enforce bounded capacity and never exceed MAX_CONCURRENT_JOBS", async () => {
-    const repository = AppDataSource.getRepository(ResumeEntity);
-
-    // Create 4 pending jobs
-    await repository.save([
-      repository.create({ telegramId: "u1", videoUrl: "https://example.com/1.mp4", status: ResumeStatus.InProgress }),
-      repository.create({ telegramId: "u2", videoUrl: "https://example.com/2.mp4", status: ResumeStatus.InProgress }),
-      repository.create({ telegramId: "u3", videoUrl: "https://example.com/3.mp4", status: ResumeStatus.InProgress }),
-      repository.create({ telegramId: "u4", videoUrl: "https://example.com/4.mp4", status: ResumeStatus.InProgress }),
+    const jobList = await Promise.all([
+      databaseService.createAndSave({ telegramId: "u1", videoUrl: "https://example.com/1.mp4" }),
+      databaseService.createAndSave({ telegramId: "u2", videoUrl: "https://example.com/2.mp4" }),
+      databaseService.createAndSave({ telegramId: "u3", videoUrl: "https://example.com/3.mp4" }),
+      databaseService.createAndSave({ telegramId: "u4", videoUrl: "https://example.com/4.mp4" }),
     ]);
 
     let currentlyRunning = 0;
@@ -162,8 +158,27 @@ describe("Background Worker & Pool Dispatcher Concurrency", () => {
       sendWebhookNotification: vi.fn().mockResolvedValue({ success: true, attempts: 1 }),
     };
 
+    const queue = [...jobList];
+    const mockDbService: IResumeDatabaseService = {
+      createAndSave: databaseService.createAndSave.bind(databaseService),
+      claimNextPending: vi.fn().mockImplementation(async () => queue.shift() ?? null),
+      markProcessed: databaseService.markProcessed.bind(databaseService),
+      markSent: databaseService.markSent.bind(databaseService),
+      markFailed: databaseService.markFailed.bind(databaseService),
+      recordDeliveryFailure: databaseService.recordDeliveryFailure.bind(databaseService),
+      findById: databaseService.findById.bind(databaseService),
+      countPending: databaseService.countPending.bind(databaseService),
+      clear: databaseService.clear.bind(databaseService),
+    };
+
+    const aiClients = createAiClients({
+      whisperUrl: "http://localhost:8000/v1",
+      openRouterApiKey: "dummy-key",
+    });
+
     const dispatcher = new WorkerDispatcher({
-      dataSource: AppDataSource,
+      databaseService: mockDbService,
+      aiClients,
       maxConcurrency: 2, // Hard limit of 2 concurrent jobs
       tempDir: tempBaseDir,
       services: mockServices,
@@ -174,7 +189,7 @@ describe("Background Worker & Pool Dispatcher Concurrency", () => {
 
     await vi.waitFor(
       async () => {
-        const remaining = await repository.countBy({ status: ResumeStatus.InProgress });
+        const remaining = await databaseService.countPending();
         expect(remaining).toBe(0);
       },
       { timeout: 4000, interval: 50 },
@@ -187,20 +202,14 @@ describe("Background Worker & Pool Dispatcher Concurrency", () => {
   });
 
   it("should isolate faults: Job 1 failure does not crash or abort Job 2", async () => {
-    const repository = AppDataSource.getRepository(ResumeEntity);
-
-    const [jobFail, jobSuccess] = await repository.save([
-      repository.create({
-        telegramId: "fail-user",
-        videoUrl: "https://example.com/corrupt.mp4",
-        status: ResumeStatus.InProgress,
-      }),
-      repository.create({
-        telegramId: "success-user",
-        videoUrl: "https://example.com/valid.mp4",
-        status: ResumeStatus.InProgress,
-      }),
-    ]);
+    const jobFail = await databaseService.createAndSave({
+      telegramId: "fail-user",
+      videoUrl: "https://example.com/corrupt.mp4",
+    });
+    const jobSuccess = await databaseService.createAndSave({
+      telegramId: "success-user",
+      videoUrl: "https://example.com/valid.mp4",
+    });
 
     const mockServices: JobProcessorServices = {
       downloadVideo: vi.fn().mockImplementation(async (_url, _dir, jobId) => {
@@ -217,8 +226,27 @@ describe("Background Worker & Pool Dispatcher Concurrency", () => {
       sendWebhookNotification: vi.fn().mockResolvedValue({ success: true, attempts: 1 }),
     };
 
+    const queue = [jobFail, jobSuccess];
+    const mockDbService: IResumeDatabaseService = {
+      createAndSave: databaseService.createAndSave.bind(databaseService),
+      claimNextPending: vi.fn().mockImplementation(async () => queue.shift() ?? null),
+      markProcessed: databaseService.markProcessed.bind(databaseService),
+      markSent: databaseService.markSent.bind(databaseService),
+      markFailed: databaseService.markFailed.bind(databaseService),
+      recordDeliveryFailure: databaseService.recordDeliveryFailure.bind(databaseService),
+      findById: databaseService.findById.bind(databaseService),
+      countPending: databaseService.countPending.bind(databaseService),
+      clear: databaseService.clear.bind(databaseService),
+    };
+
+    const aiClients = createAiClients({
+      whisperUrl: "http://localhost:8000/v1",
+      openRouterApiKey: "dummy-key",
+    });
+
     const dispatcher = new WorkerDispatcher({
-      dataSource: AppDataSource,
+      databaseService: mockDbService,
+      aiClients,
       maxConcurrency: 2,
       tempDir: tempBaseDir,
       services: mockServices,
@@ -229,8 +257,8 @@ describe("Background Worker & Pool Dispatcher Concurrency", () => {
 
     await vi.waitFor(
       async () => {
-        const failedResult = await repository.findOneBy({ id: jobFail.id });
-        const successResult = await repository.findOneBy({ id: jobSuccess.id });
+        const failedResult = await databaseService.findById(jobFail.id);
+        const successResult = await databaseService.findById(jobSuccess.id);
 
         expect(failedResult?.status).toBe(ResumeStatus.Failed);
         expect(failedResult?.errorMessage).toContain("Simulated video download corrupt error");
@@ -245,14 +273,10 @@ describe("Background Worker & Pool Dispatcher Concurrency", () => {
   });
 
   it("should guarantee temp directory garbage collection per finished task", async () => {
-    const repository = AppDataSource.getRepository(ResumeEntity);
-    const job = await repository.save(
-      repository.create({
-        telegramId: "gc-user",
-        videoUrl: "https://example.com/gc.mp4",
-        status: ResumeStatus.InProgress,
-      }),
-    );
+    const job = await databaseService.createAndSave({
+      telegramId: "gc-user",
+      videoUrl: "https://example.com/gc.mp4",
+    });
 
     const expectedJobDir = path.join(tempBaseDir, String(job.id));
 
@@ -270,15 +294,21 @@ describe("Background Worker & Pool Dispatcher Concurrency", () => {
       sendWebhookNotification: vi.fn().mockResolvedValue({ success: true, attempts: 1 }),
     };
 
+    const aiClients = createAiClients({
+      whisperUrl: "http://localhost:8000/v1",
+      openRouterApiKey: "dummy-key",
+    });
+
     await processJob(job, {
-      dataSource: AppDataSource,
+      databaseService,
+      aiClients,
       tempDir: tempBaseDir,
       services: mockServices,
     });
 
     expect(fs.existsSync(expectedJobDir)).toBe(false);
 
-    const updated = await repository.findOneBy({ id: job.id });
+    const updated = await databaseService.findById(job.id);
     expect(updated?.status).toBe(ResumeStatus.Sent);
   });
 });

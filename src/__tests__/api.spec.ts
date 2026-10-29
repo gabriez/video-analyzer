@@ -3,13 +3,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
 import AppDataSource, { initializeDatabase } from "../database/appDataSource.js";
-import { ResumeEntity } from "../database/entities/ResumeEntity.js";
+import { ResumeDatabaseService } from "../services/database/resumeDatabaseService.js";
 import { ResumeStatus } from "../types/resume.js";
 
 describe("HTTP API Endpoints - POST /api/v1/analyze", () => {
   const TEST_BEARER_TOKEN = "api-secret-token-lan-999";
   let server: Server;
   let baseUrl: string;
+  let databaseService: ResumeDatabaseService;
 
   beforeAll(async () => {
     process.env.API_BEARER_TOKEN = TEST_BEARER_TOKEN;
@@ -18,7 +19,11 @@ describe("HTTP API Endpoints - POST /api/v1/analyze", () => {
     await initializeDatabase();
     await AppDataSource.synchronize();
 
-    const app = createApp({ bearerToken: TEST_BEARER_TOKEN });
+    databaseService = new ResumeDatabaseService(AppDataSource);
+    const app = createApp({
+      bearerToken: TEST_BEARER_TOKEN,
+      databaseService,
+    });
 
     await new Promise<void>((resolve) => {
       server = app.listen(0, "127.0.0.1", () => {
@@ -41,8 +46,7 @@ describe("HTTP API Endpoints - POST /api/v1/analyze", () => {
   });
 
   beforeEach(async () => {
-    const repository = AppDataSource.getRepository(ResumeEntity);
-    await repository.clear();
+    await databaseService.clear();
   });
 
   it("should return 202 Accepted and create database record when payload and Bearer token are valid", async () => {
@@ -72,11 +76,8 @@ describe("HTTP API Endpoints - POST /api/v1/analyze", () => {
     expect(body.message).toBe("Video queued for analysis");
     expect(body.jobId).toBeDefined();
 
-    // Verify record in SQLite database
-    const repository = AppDataSource.getRepository(ResumeEntity);
-    const savedEntity = await repository.findOneBy({
-      id: Number(body.jobId),
-    });
+    // Verify record in SQLite database via injected service
+    const savedEntity = await databaseService.findById(Number(body.jobId));
 
     expect(savedEntity).toBeDefined();
     expect(savedEntity?.telegramId).toBe("tg-user-777");

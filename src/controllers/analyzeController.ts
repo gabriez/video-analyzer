@@ -1,9 +1,8 @@
-import type { NextFunction, Request, Response } from "express";
+import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { z } from "zod";
 
-import AppDataSource from "../database/appDataSource.js";
-import { ResumeEntity } from "../database/entities/ResumeEntity.js";
-import { ResumeStatus } from "../types/resume.js";
+import { getResumeDatabaseService } from "../services/database/resumeDatabaseService.js";
+import type { IResumeDatabaseService } from "../types/database.js";
 
 export const analyzeRequestSchema = z.object({
   telegramId: z.string().min(1, "telegramId is required"),
@@ -13,37 +12,38 @@ export const analyzeRequestSchema = z.object({
 export type { AnalyzeRequest } from "../types/api.js";
 
 /**
- * Controller handling video analysis job submissions.
- * Validates request payload, persists a new ResumeEntity in `in_progress` state,
- * and responds with HTTP 202 Accepted.
+ * Factory creating the submit controller with an injected database service.
  */
-export async function submitAnalyzeJob(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const parseResult = analyzeRequestSchema.safeParse(req.body);
+export function createSubmitAnalyzeJobHandler(databaseService: IResumeDatabaseService = getResumeDatabaseService()): RequestHandler {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const parseResult = analyzeRequestSchema.safeParse(req.body);
 
-  if (!parseResult.success) {
-    res.status(400).json({
-      error: "Validation error",
-      details: parseResult.error.format(),
-    });
-    return;
-  }
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: "Validation error",
+        details: parseResult.error.format(),
+      });
+      return;
+    }
 
-  try {
-    const repository = AppDataSource.getRepository(ResumeEntity);
-    const newJob = repository.create({
-      telegramId: parseResult.data.telegramId,
-      videoUrl: parseResult.data.url,
-      status: ResumeStatus.InProgress,
-    });
+    try {
+      const savedJob = await databaseService.createAndSave({
+        telegramId: parseResult.data.telegramId,
+        videoUrl: parseResult.data.url,
+      });
 
-    const savedJob = await repository.save(newJob);
-
-    res.status(202).json({
-      jobId: String(savedJob.id),
-      status: savedJob.status,
-      message: "Video queued for analysis",
-    });
-  } catch (error) {
-    next(error);
-  }
+      res.status(202).json({
+        jobId: String(savedJob.id),
+        status: savedJob.status,
+        message: "Video queued for analysis",
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
+
+/**
+ * Default handler using singleton database service.
+ */
+export const submitAnalyzeJob: RequestHandler = createSubmitAnalyzeJobHandler();

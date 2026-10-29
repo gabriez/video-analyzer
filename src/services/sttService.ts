@@ -29,19 +29,23 @@ export async function transcribeAudio(audioPath: string, options: STTOptions = {
     throw new TranscriptionError(`Audio file does not exist at: ${audioPath}`);
   }
 
-  let whisperUrl = options.whisperUrl;
-  if (!whisperUrl) {
-    try {
-      whisperUrl = getConfig().WHISPER_URL;
-    } catch {
-      whisperUrl = "http://speaches:8000/v1";
-    }
-  }
+  let client = options.client;
 
-  const client = new OpenAI({
-    baseURL: whisperUrl,
-    apiKey: "dummy-key-for-speaches",
-  });
+  if (!client) {
+    let whisperUrl = options.whisperUrl;
+    if (!whisperUrl) {
+      try {
+        whisperUrl = getConfig().WHISPER_URL;
+      } catch {
+        whisperUrl = "http://speaches:8000/v1";
+      }
+    }
+
+    client = new OpenAI({
+      baseURL: whisperUrl,
+      apiKey: "dummy-key-for-speaches",
+    });
+  }
 
   try {
     const fileStream = fs.createReadStream(audioPath);
