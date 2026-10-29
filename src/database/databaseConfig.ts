@@ -1,4 +1,5 @@
 import type { DataSourceOptions } from "typeorm";
+import { ResumeEntity } from "./entities/ResumeEntity.js";
 
 export const DB_DATABASE = process.env.DB_DATABASE ?? "database.sqlite";
 
@@ -11,5 +12,5 @@ const databaseConfig: DataSourceOptions = {
 
 export const dataSourceOptionsCommon: DataSourceOptions = {
   ...databaseConfig,
-  entities: [],
+  entities: [ResumeEntity],
 };

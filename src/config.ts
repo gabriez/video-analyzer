@@ -35,7 +35,7 @@ export const configSchema = z.object({
   DB_LOGGING: booleanEnvSchema.default(false),
   DB_SYNCHRONIZE: booleanEnvSchema.default(false),
   API_BEARER_TOKEN: z.string().min(1, "API_BEARER_TOKEN is required"),
-  WHISPER_URL: z.string().url().default("http://speaches:8000/v1"),
+  WHISPER_URL: z.url().default("http://speaches:8000/v1"),
   OPENROUTER_API_KEY: z.string().min(1, "OPENROUTER_API_KEY is required"),
   OPENROUTER_MODEL: z.string().min(1).default("google/gemini-2.5-flash"),
   WEBHOOK_URL: optionalUrlSchema,

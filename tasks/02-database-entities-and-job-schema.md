@@ -24,7 +24,7 @@ Enhance and finalize the TypeORM `ResumeEntity` schema to support the complete v
 
 ## Tests to Implement (`src/__tests__/database.spec.ts`)
 
-- [ ] Initialize DataSource and confirm WAL mode pragma active (`PRAGMA journal_mode;` returns `wal`).
-- [ ] Insert a new `ResumeEntity` in `in_progress` state with required fields.
-- [ ] Transition entity status from `in_progress` to `processed`, then `sent`.
-- [ ] Query pending jobs ordered by `create_at ASC`.
+- [x] Initialize DataSource and confirm WAL mode pragma active (`PRAGMA journal_mode;` returns `wal`).
+- [x] Insert a new `ResumeEntity` in `in_progress` state with required fields.
+- [x] Transition entity status from `in_progress` to `processed`, then `sent`.
+- [x] Query pending jobs ordered by `create_at ASC`.
