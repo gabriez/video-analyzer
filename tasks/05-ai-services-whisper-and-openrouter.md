@@ -23,9 +23,9 @@ Implement clients for local Speech-to-Text via Speaches (`faster-whisper`) and r
 
 ## Tests to Implement (`src/__tests__/stt.spec.ts` & `src/__tests__/vision.spec.ts`)
 
-- [ ] STT returns transcribed text when audio has speech.
-- [ ] STT returns empty string `""` when transcription is whitespace or empty.
-- [ ] STT propagates `TranscriptionError` on network rejection.
-- [ ] Vision service formats image frames correctly as `image_url` parts.
-- [ ] Vision service adapts prompt when transcription is null (silent video).
-- [ ] Vision service throws `VisionAnalysisError` when OpenRouter returns 429 or 5xx.
+- [x] STT returns transcribed text when audio has speech.
+- [x] STT returns empty string `""` when transcription is whitespace or empty.
+- [x] STT propagates `TranscriptionError` on network rejection.
+- [x] Vision service formats image frames correctly as `image_url` parts.
+- [x] Vision service adapts prompt when transcription is null (silent video).
+- [x] Vision service throws `VisionAnalysisError` when OpenRouter returns 429 or 5xx.
