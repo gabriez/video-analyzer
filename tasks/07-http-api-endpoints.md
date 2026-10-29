@@ -35,7 +35,7 @@ Implement the Express router, controller, and DTO validation for the public endp
 
 ## Tests to Implement (`src/__tests__/api.spec.ts`)
 
-- [ ] Returns `202 Accepted` and creates database record when payload and Bearer token are valid.
-- [ ] Returns `400 Bad Request` with structured errors when `url` is missing or not a valid URL.
-- [ ] Returns `400 Bad Request` when `telegramId` is missing or empty.
-- [ ] Returns `401 Unauthorized` when Bearer token is omitted or invalid.
+- [x] Returns `202 Accepted` and creates database record when payload and Bearer token are valid.
+- [x] Returns `400 Bad Request` with structured errors when `url` is missing or not a valid URL.
+- [x] Returns `400 Bad Request` when `telegramId` is missing or empty.
+- [x] Returns `401 Unauthorized` when Bearer token is omitted or invalid.
