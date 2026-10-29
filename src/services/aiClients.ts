@@ -28,7 +28,7 @@ export function createAiClients(options?: { whisperUrl?: string; openRouterApiKe
 
   const whisperClient = new OpenAI({
     baseURL: whisperUrl,
-    apiKey: "dummy-key-for-speaches",
+    apiKey: openRouterApiKey,
   });
 
   const visionClient = new OpenAI({

@@ -55,14 +55,15 @@ describe("Speech-to-Text Service (Speaches / Whisper)", () => {
     });
 
     const result = await transcribeAudio(sampleAudioPath, {
-      whisperUrl: "http://localhost:8000/v1",
+      whisperUrl: "https://openrouter.ai/api/v1",
+      model: "openai/whisper-large-v3",
     });
 
     expect(result).toBe("Hello, this is a clear audio transcription test.");
     expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: "whisper-1",
+        model: "openai/whisper-large-v3",
       }),
     );
   });

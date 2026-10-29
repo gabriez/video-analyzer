@@ -30,28 +30,42 @@ export async function transcribeAudio(audioPath: string, options: STTOptions = {
   }
 
   let client = options.client;
+  let model = options.model;
 
   if (!client) {
     let whisperUrl = options.whisperUrl;
-    if (!whisperUrl) {
-      try {
-        whisperUrl = getConfig().WHISPER_URL;
-      } catch {
-        whisperUrl = "http://speaches:8000/v1";
-      }
+    let apiKey: string | undefined;
+
+    try {
+      const config = getConfig();
+      whisperUrl = whisperUrl ?? config.WHISPER_URL;
+      model = model ?? config.WHISPER_MODEL;
+      apiKey = config.OPENROUTER_API_KEY;
+    } catch {
+      whisperUrl = whisperUrl ?? "https://openrouter.ai/api/v1";
+      model = model ?? "openai/whisper-large-v3";
+      apiKey = "dummy-key";
     }
 
     client = new OpenAI({
       baseURL: whisperUrl,
-      apiKey: "dummy-key-for-speaches",
+      apiKey,
     });
+  }
+
+  if (!model) {
+    try {
+      model = getConfig().WHISPER_MODEL;
+    } catch {
+      model = "openai/whisper-large-v3";
+    }
   }
 
   try {
     const fileStream = fs.createReadStream(audioPath);
     const response = await client.audio.transcriptions.create({
       file: fileStream,
-      model: "whisper-1",
+      model,
     });
 
     return response.text ? response.text.trim() : "";

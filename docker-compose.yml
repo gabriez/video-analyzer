@@ -12,7 +12,8 @@ services:
       - DB_DATABASE=/app/data/database.sqlite
       - DB_LOGGING=false
       - DB_SYNCHRONIZE=${DB_SYNCHRONIZE:-false}
-      - WHISPER_URL=http://speaches:8000/v1
+      - WHISPER_URL=${WHISPER_URL:-https://openrouter.ai/api/v1}
+      - WHISPER_MODEL=${WHISPER_MODEL:-openai/whisper-large-v3}
       - API_BEARER_TOKEN=${API_BEARER_TOKEN:-secret-lan-token}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-dummy-key}
       - OPENROUTER_MODEL=${OPENROUTER_MODEL:-google/gemini-2.5-flash}
@@ -39,7 +40,8 @@ services:
       - DB_DATABASE=/app/data/database.sqlite
       - DB_LOGGING=false
       - DB_SYNCHRONIZE=false
-      - WHISPER_URL=http://speaches:8000/v1
+      - WHISPER_URL=${WHISPER_URL:-https://openrouter.ai/api/v1}
+      - WHISPER_MODEL=${WHISPER_MODEL:-openai/whisper-large-v3}
       - API_BEARER_TOKEN=${API_BEARER_TOKEN:-secret-lan-token}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-dummy-key}
       - OPENROUTER_MODEL=${OPENROUTER_MODEL:-google/gemini-2.5-flash}

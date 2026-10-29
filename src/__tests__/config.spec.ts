@@ -17,7 +17,8 @@ describe("Configuration Module (Zod)", () => {
     expect(config.DB_LOGGING).toBe(false);
     expect(config.DB_SYNCHRONIZE).toBe(false);
     expect(config.API_BEARER_TOKEN).toBe("super-secret-token");
-    expect(config.WHISPER_URL).toBe("http://speaches:8000/v1");
+    expect(config.WHISPER_URL).toBe("https://openrouter.ai/api/v1");
+    expect(config.WHISPER_MODEL).toBe("openai/whisper-large-v3");
     expect(config.OPENROUTER_API_KEY).toBe("sk-or-v1-dummy-key");
     expect(config.OPENROUTER_MODEL).toBe("google/gemini-2.5-flash");
     expect(config.WEBHOOK_URL).toBeUndefined();
@@ -34,6 +35,7 @@ describe("Configuration Module (Zod)", () => {
       DB_LOGGING: "true",
       DB_SYNCHRONIZE: "1",
       WHISPER_URL: "https://custom-whisper.lan/v1",
+      WHISPER_MODEL: "openai/whisper-1",
       OPENROUTER_MODEL: "anthropic/claude-3.5-sonnet",
       WEBHOOK_URL: "https://n8n.internal.net/webhook/video",
       WEBHOOK_AUTH_HEADER: "X-Custom-Auth",
@@ -48,6 +50,7 @@ describe("Configuration Module (Zod)", () => {
     expect(config.DB_LOGGING).toBe(true);
     expect(config.DB_SYNCHRONIZE).toBe(true);
     expect(config.WHISPER_URL).toBe("https://custom-whisper.lan/v1");
+    expect(config.WHISPER_MODEL).toBe("openai/whisper-1");
     expect(config.OPENROUTER_MODEL).toBe("anthropic/claude-3.5-sonnet");
     expect(config.WEBHOOK_URL).toBe("https://n8n.internal.net/webhook/video");
     expect(config.WEBHOOK_AUTH_HEADER).toBe("X-Custom-Auth");

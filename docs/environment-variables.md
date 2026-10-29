@@ -8,21 +8,22 @@ The configuration is strictly validated on startup using **Zod** (`src/config.ts
 
 ## Variable Reference Table
 
-| Variable              | Required? | Default Value             | Description                                                                                                                                                                      |
-| :-------------------- | :-------: | :------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`                |    No     | `3000`                    | HTTP port on which the Express REST API listens.                                                                                                                                 |
-| `DB_DATABASE`         |    No     | `database.sqlite`         | Absolute or relative path to the SQLite database file. In Docker Compose, this maps to `/app/data/database.sqlite`.                                                              |
-| `DB_LOGGING`          |    No     | `false`                   | Enables TypeORM SQL query logging. Accepts boolean string (`true`, `false`, `1`, `0`).                                                                                           |
-| `DB_SYNCHRONIZE`      |    No     | `false`                   | Automatically creates missing tables and columns on startup. Recommended `false` in production.                                                                                  |
-| `API_BEARER_TOKEN`    |  **Yes**  | —                         | Static secret token required for HTTP authentication (`Authorization: Bearer <token>`) on protected endpoints like `POST /api/v1/analyze`.                                       |
-| `WHISPER_URL`         |    No     | `http://speaches:8000/v1` | Base URL for the OpenAI-compatible Speech-to-Text service (e.g. local Speaches container). Must be a valid URL.                                                                  |
-| `OPENROUTER_API_KEY`  |  **Yes**  | —                         | Secret API key used to authenticate multimodal analysis requests against OpenRouter (`https://openrouter.ai/api/v1`).                                                            |
-| `OPENROUTER_MODEL`    |    No     | `google/gemini-2.5-flash` | Multimodal Vision model ID hosted on OpenRouter responsible for frame analysis and summary synthesis.                                                                            |
-| `WEBHOOK_URL`         |    No     | —                         | Target URL where the background worker posts the completed video summary. If omitted or empty string, webhook dispatch is skipped.                                               |
-| `WEBHOOK_AUTH_HEADER` |    No     | `X-N8N-Webhook-Token`     | Custom HTTP header name injected during webhook delivery (e.g. for n8n webhook authentication).                                                                                  |
-| `WEBHOOK_AUTH_TOKEN`  |    No     | —                         | Secret token value associated with `WEBHOOK_AUTH_HEADER`. Omitted from headers if undefined or empty.                                                                            |
-| `TEMP_DIR`            |    No     | `/tmp/video-analyzer`     | Scratchpad directory where downloaded videos, extracted audio (`.mp3`), and frame sequences (`.jpg`) are stored during processing. Cleaned up immediately after task completion. |
-| `MAX_CONCURRENT_JOBS` |    No     | `3`                       | Maximum number of video analysis jobs processed simultaneously by the background worker pool to avoid CPU/RAM saturation.                                                        |
+| Variable              | Required? | Default Value                  | Description                                                                                                                                                                      |
+| :-------------------- | :-------: | :----------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                |    No     | `3000`                         | HTTP port on which the Express REST API listens.                                                                                                                                 |
+| `DB_DATABASE`         |    No     | `database.sqlite`              | Absolute or relative path to the SQLite database file. In Docker Compose, this maps to `/app/data/database.sqlite`.                                                              |
+| `DB_LOGGING`          |    No     | `false`                        | Enables TypeORM SQL query logging. Accepts boolean string (`true`, `false`, `1`, `0`).                                                                                           |
+| `DB_SYNCHRONIZE`      |    No     | `false`                        | Automatically creates missing tables and columns on startup. Recommended `false` in production.                                                                                  |
+| `API_BEARER_TOKEN`    |  **Yes**  | —                              | Static secret token required for HTTP authentication (`Authorization: Bearer <token>`) on protected endpoints like `POST /api/v1/analyze`.                                       |
+| `WHISPER_URL`         |    No     | `https://openrouter.ai/api/v1` | Base URL for the OpenAI-compatible Speech-to-Text service (OpenRouter audio transcriptions endpoint). Must be a valid URL.                                                       |
+| `WHISPER_MODEL`       |    No     | `openai/whisper-large-v3`      | Speech-to-Text model ID on OpenRouter (e.g. `openai/whisper-large-v3`, `openai/whisper-1`).                                                                                      |
+| `OPENROUTER_API_KEY`  |  **Yes**  | —                              | Secret API key used to authenticate multimodal analysis requests against OpenRouter (`https://openrouter.ai/api/v1`).                                                            |
+| `OPENROUTER_MODEL`    |    No     | `google/gemini-2.5-flash`      | Multimodal Vision model ID hosted on OpenRouter responsible for frame analysis and summary synthesis.                                                                            |
+| `WEBHOOK_URL`         |    No     | —                              | Target URL where the background worker posts the completed video summary. If omitted or empty string, webhook dispatch is skipped.                                               |
+| `WEBHOOK_AUTH_HEADER` |    No     | `X-N8N-Webhook-Token`          | Custom HTTP header name injected during webhook delivery (e.g. for n8n webhook authentication).                                                                                  |
+| `WEBHOOK_AUTH_TOKEN`  |    No     | —                              | Secret token value associated with `WEBHOOK_AUTH_HEADER`. Omitted from headers if undefined or empty.                                                                            |
+| `TEMP_DIR`            |    No     | `/tmp/video-analyzer`          | Scratchpad directory where downloaded videos, extracted audio (`.mp3`), and frame sequences (`.jpg`) are stored during processing. Cleaned up immediately after task completion. |
+| `MAX_CONCURRENT_JOBS` |    No     | `3`                            | Maximum number of video analysis jobs processed simultaneously by the background worker pool to avoid CPU/RAM saturation.                                                        |
 
 ---
 
@@ -71,8 +72,14 @@ The configuration is strictly validated on startup using **Zod** (`src/config.ts
 #### `WHISPER_URL`
 
 - **Type**: `string` (valid URL)
-- **Default**: `http://speaches:8000/v1`
-- **Usage**: Target endpoint for audio transcription. Defaults to the local `speaches` container service defined in `docker-compose.yml`.
+- **Default**: `https://openrouter.ai/api/v1`
+- **Usage**: Target endpoint for audio transcription using OpenRouter's audio transcriptions API (`POST /api/v1/audio/transcriptions`). Can also point to a self-hosted Speaches container (`http://speaches:8000/v1`).
+
+#### `WHISPER_MODEL`
+
+- **Type**: `string`
+- **Default**: `openai/whisper-large-v3`
+- **Usage**: Speech-to-Text model slug on OpenRouter (e.g. `openai/whisper-large-v3`, `openai/whisper-large-v3-turbo`, or `openai/whisper-1`).
 
 #### `OPENROUTER_API_KEY`
 
