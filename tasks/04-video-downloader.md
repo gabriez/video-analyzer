@@ -17,7 +17,7 @@ Implement a resilient video downloader using `yt-dlp` to fetch videos from socia
 
 ## Tests to Implement (`src/__tests__/downloader.spec.ts`)
 
-- [ ] Successfully downloads direct HTTP MP4 sample or valid URL to destination.
-- [ ] Throws `DownloadError` when URL is invalid or host is unreachable.
-- [ ] Throws `DownloadTimeoutError` when download exceeds timeout threshold.
-- [ ] Ensures downloaded video does not exceed 720p height.
+- [x] Successfully downloads direct HTTP MP4 sample or valid URL to destination.
+- [x] Throws `DownloadError` when URL is invalid or host is unreachable.
+- [x] Throws `DownloadTimeoutError` when download exceeds timeout threshold.
+- [x] Ensures downloaded video does not exceed 720p height.
