@@ -27,7 +27,7 @@ Implement a robust, strongly-typed environment configuration module using Zod an
 
 ## Tests to Implement (`src/__tests__/auth.spec.ts`)
 
-- [ ] Returns `401` when `Authorization` header is missing.
-- [ ] Returns `401` when token format is not Bearer (e.g. `Basic abc`).
-- [ ] Returns `401` when token string does not match `API_BEARER_TOKEN`.
-- [ ] Calls `next()` when valid Bearer token is provided.
+- [x] Returns `401` when `Authorization` header is missing.
+- [x] Returns `401` when token format is not Bearer (e.g. `Basic abc`).
+- [x] Returns `401` when token string does not match `API_BEARER_TOKEN`.
+- [x] Calls `next()` when valid Bearer token is provided.
