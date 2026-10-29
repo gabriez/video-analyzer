@@ -72,4 +72,11 @@ export class ResumeEntity extends CoreEntity {
     nullable: true,
   })
   deliveredAt!: Date | null;
+
+  @Column({
+    type: "datetime",
+    name: "locked_at",
+    nullable: true,
+  })
+  lockedAt!: Date | null;
 }

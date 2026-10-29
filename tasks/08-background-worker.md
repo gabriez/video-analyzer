@@ -61,8 +61,8 @@ Implement `src/worker.ts` as an autonomous, multi-task concurrent orchestrator. 
 
 ## Tests to Implement (`src/__tests__/worker.spec.ts`)
 
-- [ ] Concurrency check: Dispatches and processes two jobs simultaneously without blocking Job 2 behind Job 1.
-- [ ] Bounded capacity: Does not launch more than `MAX_CONCURRENT_JOBS` at the same time.
-- [ ] Fault isolation: Job 1 failure (corrupt video) does not impact Job 2's successful execution.
-- [ ] Atomic claim: Two concurrent worker dispatch loops never claim the exact same job twice.
-- [ ] Temp directory garbage collection: Cleans `/app/temp/<jobId>` individually per finished task.
+- [x] Concurrency check: Dispatches and processes two jobs simultaneously without blocking Job 2 behind Job 1.
+- [x] Bounded capacity: Does not launch more than `MAX_CONCURRENT_JOBS` at the same time.
+- [x] Fault isolation: Job 1 failure (corrupt video) does not impact Job 2's successful execution.
+- [x] Atomic claim: Two concurrent worker dispatch loops never claim the exact same job twice.
+- [x] Temp directory garbage collection: Cleans `/app/temp/<jobId>` individually per finished task.

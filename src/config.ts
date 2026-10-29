@@ -42,6 +42,7 @@ export const configSchema = z.object({
   WEBHOOK_AUTH_HEADER: z.string().min(1).default("X-N8N-Webhook-Token"),
   WEBHOOK_AUTH_TOKEN: optionalStringSchema,
   TEMP_DIR: z.string().min(1).default("/tmp/video-analyzer"),
+  MAX_CONCURRENT_JOBS: z.coerce.number().int().positive().default(3),
 });
 
 export type Config = z.infer<typeof configSchema>;
