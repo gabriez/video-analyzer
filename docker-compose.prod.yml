@@ -1,0 +1,63 @@
+services:
+  app:
+    image: ${REGISTRY_IMAGE:-ghcr.io/gabrieltorres/video-analyzer}:${IMAGE_TAG:-latest}
+    container_name: video-analyzer-api
+    restart: unless-stopped
+    stop_grace_period: 15s
+    ports:
+      - "${APP_PORT:-3001}:3000"
+    env_file:
+      - .env
+    environment:
+      - PORT=3000
+      - DB_DATABASE=/app/data/database.sqlite
+      - DB_SYNCHRONIZE=false
+      - TEMP_DIR=/app/temp
+    volumes:
+      - app-data:/app/data
+      - app-temp:/app/temp
+    depends_on:
+      - speaches
+    networks:
+      - video-network
+
+  worker:
+    image: ${REGISTRY_IMAGE:-ghcr.io/gabrieltorres/video-analyzer}:${IMAGE_TAG:-latest}
+    container_name: video-analyzer-worker
+    restart: unless-stopped
+    stop_grace_period: 30s
+    command: ["node", "dist/src/worker.js"]
+    env_file:
+      - .env
+    environment:
+      - DB_DATABASE=/app/data/database.sqlite
+      - DB_SYNCHRONIZE=false
+      - TEMP_DIR=/app/temp
+    volumes:
+      - app-data:/app/data
+      - app-temp:/app/temp
+    depends_on:
+      - app
+      - speaches
+    networks:
+      - video-network
+
+  speaches:
+    image: ghcr.io/speaches-ai/speaches:latest-cpu
+    container_name: video-analyzer-speaches
+    restart: unless-stopped
+    ports:
+      - "${SPEACHES_PORT:-8000}:8000"
+    volumes:
+      - speaches-cache:/root/.cache/huggingface
+    networks:
+      - video-network
+
+networks:
+  video-network:
+    driver: bridge
+
+volumes:
+  app-data:
+  app-temp:
+  speaches-cache:
