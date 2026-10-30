@@ -2,17 +2,35 @@ import "reflect-metadata";
 
 import { getConfig } from "./config.js";
 import AppDataSource, { initializeDatabase } from "./database/appDataSource.js";
+import { logger } from "./logger.js";
 import { getAiClients } from "./services/aiClients.js";
 import { getResumeDatabaseService } from "./services/database/resumeDatabaseService.js";
 import { WorkerDispatcher } from "./services/workerDispatcher.js";
 
 async function main() {
   const config = getConfig();
-  console.log(`Starting Video Analyzer Background Worker (Max Concurrency: ${config.MAX_CONCURRENT_JOBS})`);
+  const workerLogger = logger.child({ context: "Worker" });
+
+  workerLogger.info(
+    {
+      maxConcurrency: config.MAX_CONCURRENT_JOBS,
+      tempDir: config.TEMP_DIR,
+      whisperModel: config.WHISPER_MODEL,
+      visionModel: config.OPENROUTER_MODEL,
+      logLevel: config.LOG_LEVEL,
+    },
+    `Starting Video Analyzer Background Worker (Max Concurrency: ${config.MAX_CONCURRENT_JOBS})`,
+  );
 
   try {
     await initializeDatabase();
-    console.log("Worker database connected successfully (SQLite WAL mode)");
+    workerLogger.info(
+      {
+        database: config.DB_DATABASE,
+        mode: "SQLite WAL",
+      },
+      "Worker database connected successfully",
+    );
 
     // Persistent clients and database service instance
     const databaseService = getResumeDatabaseService(AppDataSource);
@@ -23,15 +41,16 @@ async function main() {
       aiClients,
       maxConcurrency: config.MAX_CONCURRENT_JOBS,
       tempDir: config.TEMP_DIR,
+      logger: workerLogger,
     });
 
     const shutdown = async (signal: string) => {
-      console.log(`Received ${signal}. Gracefully stopping worker...`);
+      workerLogger.info(`Received ${signal}. Gracefully stopping worker...`);
       await dispatcher.stop();
       if (AppDataSource.isInitialized) {
         await AppDataSource.destroy();
       }
-      console.log("Worker stopped cleanly.");
+      workerLogger.info("Worker stopped cleanly.");
       process.exit(0);
     };
 
@@ -39,9 +58,9 @@ async function main() {
     process.on("SIGTERM", () => shutdown("SIGTERM"));
 
     dispatcher.start();
-    console.log("Background dispatcher running and listening for jobs...");
+    workerLogger.info("Background dispatcher running and listening for jobs...");
   } catch (error) {
-    console.error("Fatal error starting worker:", error);
+    workerLogger.error({ err: error }, "Fatal error starting worker");
     process.exit(1);
   }
 }

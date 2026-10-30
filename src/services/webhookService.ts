@@ -1,6 +1,7 @@
 import axios, { AxiosError } from "axios";
 
 import { getConfig } from "../config.js";
+import { logger as defaultLogger } from "../logger.js";
 import type { WebhookDeliveryOptions, WebhookDeliveryResult, WebhookPayload } from "../types/webhook.js";
 
 export class WebhookDeliveryError extends Error {
@@ -42,6 +43,7 @@ export function calculateBackoffDelay(attempt: number, baseDelayMs: number, maxD
  * @throws WebhookDeliveryError when retries are exhausted or configuration is missing
  */
 export async function sendWebhookNotification(payload: WebhookPayload, options: WebhookDeliveryOptions = {}): Promise<WebhookDeliveryResult> {
+  const webhookLogger = defaultLogger.child({ context: "Webhook", jobId: payload.jobId });
   let webhookUrl = options.webhookUrl;
   let authHeader = options.authHeader;
   let authToken = options.authToken;
@@ -79,12 +81,29 @@ export async function sendWebhookNotification(payload: WebhookPayload, options: 
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
+      webhookLogger.debug(
+        {
+          attempt,
+          maxAttempts,
+          jobId: payload.jobId,
+        },
+        `Dispatching webhook notification attempt ${attempt}/${maxAttempts} to ${webhookUrl}`,
+      );
+
       const response = await axios.post(webhookUrl, payload, {
         headers,
         timeout: requestTimeoutMs,
       });
 
       if (response.status >= 200 && response.status < 300) {
+        webhookLogger.info(
+          {
+            attempt,
+            statusCode: response.status,
+            jobId: payload.jobId,
+          },
+          `Webhook successfully delivered to ${webhookUrl} on attempt ${attempt}/${maxAttempts}`,
+        );
         return {
           success: true,
           attempts: attempt,
@@ -92,9 +111,19 @@ export async function sendWebhookNotification(payload: WebhookPayload, options: 
       }
     } catch (error) {
       lastError = error;
+      const attemptErrMsg = error instanceof AxiosError ? `${error.message} (HTTP ${error.response?.status ?? "N/A"})` : String(error);
 
       if (attempt < maxAttempts) {
         const delay = calculateBackoffDelay(attempt, baseDelayMs, maxDelayMs);
+        webhookLogger.warn(
+          {
+            attempt,
+            maxAttempts,
+            delayMs: delay,
+            jobId: payload.jobId,
+          },
+          `Webhook attempt ${attempt}/${maxAttempts} failed: ${attemptErrMsg}. Retrying in ${delay}ms...`,
+        );
         await sleep(delay);
       }
     }
@@ -106,6 +135,16 @@ export async function sendWebhookNotification(payload: WebhookPayload, options: 
       : lastError instanceof Error
         ? lastError.message
         : String(lastError);
+
+  webhookLogger.error(
+    {
+      err: lastError,
+      jobId: payload.jobId,
+      attempts: maxAttempts,
+      webhookUrl,
+    },
+    `Webhook delivery permanently failed after ${maxAttempts} attempts: ${errorMessage}`,
+  );
 
   throw new WebhookDeliveryError(`Failed to deliver webhook to ${webhookUrl} after ${maxAttempts} attempts. Last error: ${errorMessage}`, lastError);
 }

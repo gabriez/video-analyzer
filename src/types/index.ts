@@ -4,6 +4,7 @@ export * from "./app.js";
 export * from "./config.js";
 export * from "./database.js";
 export * from "./downloader.js";
+export * from "./logger.js";
 export * from "./resume.js";
 export * from "./stt.js";
 export * from "./vision.js";

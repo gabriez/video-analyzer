@@ -44,6 +44,10 @@ const DEFAULT_TIMEOUT_MS = 180_000; // 3 minutes max
  * @throws DownloadError on invalid URLs, unreachable hosts, or yt-dlp execution failures
  */
 export async function downloadVideo(url: string, outputDir: string, jobId: string, options: DownloadOptions = {}): Promise<string> {
+  if (!url || typeof url !== "string" || url.trim().length === 0) {
+    throw new DownloadError(`Invalid video URL provided: URL is ${String(url)}`);
+  }
+
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const targetDir = path.join(outputDir, jobId);
   const targetPath = path.join(targetDir, "input.mp4");

@@ -102,9 +102,12 @@ describe("HTTP API Endpoints - POST /api/v1/analyze", () => {
 
     expect(response.status).toBe(400);
 
-    const body = (await response.json()) as { error: string; details?: unknown };
+    const body = (await response.json()) as { error: string; details?: Record<string, string[]> };
     expect(body.error).toBe("Validation error");
     expect(body.details).toBeDefined();
+    expect(body.details?.url).toBeDefined();
+    expect(Array.isArray(body.details?.url)).toBe(true);
+    expect(body.details?.url?.[0]).toContain("valid video URL");
   });
 
   it("should return 400 Bad Request when telegramId is missing or empty", async () => {
@@ -124,8 +127,10 @@ describe("HTTP API Endpoints - POST /api/v1/analyze", () => {
 
     expect(response.status).toBe(400);
 
-    const body = (await response.json()) as { error: string };
+    const body = (await response.json()) as { error: string; details?: Record<string, string[]> };
     expect(body.error).toBe("Validation error");
+    expect(body.details?.telegramId).toBeDefined();
+    expect(body.details?.telegramId?.[0]).toBe("telegramId is required");
   });
 
   it("should return 401 Unauthorized when Bearer token is omitted or invalid", async () => {

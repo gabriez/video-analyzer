@@ -25,6 +25,8 @@ describe("Configuration Module (Zod)", () => {
     expect(config.WEBHOOK_AUTH_HEADER).toBe("X-N8N-Webhook-Token");
     expect(config.WEBHOOK_AUTH_TOKEN).toBeUndefined();
     expect(config.TEMP_DIR).toBe("/tmp/video-analyzer");
+    expect(config.LOG_LEVEL).toBe("info");
+    expect(config.LOG_FORMAT).toBe("text");
   });
 
   it("should parse custom environment variables with proper coercion", () => {
@@ -41,6 +43,8 @@ describe("Configuration Module (Zod)", () => {
       WEBHOOK_AUTH_HEADER: "X-Custom-Auth",
       WEBHOOK_AUTH_TOKEN: "n8n-secret-999",
       TEMP_DIR: "/var/tmp/analyzer",
+      LOG_LEVEL: "debug",
+      LOG_FORMAT: "json",
     };
 
     const config = createConfig(customEnv);
@@ -56,6 +60,8 @@ describe("Configuration Module (Zod)", () => {
     expect(config.WEBHOOK_AUTH_HEADER).toBe("X-Custom-Auth");
     expect(config.WEBHOOK_AUTH_TOKEN).toBe("n8n-secret-999");
     expect(config.TEMP_DIR).toBe("/var/tmp/analyzer");
+    expect(config.LOG_LEVEL).toBe("debug");
+    expect(config.LOG_FORMAT).toBe("json");
   });
 
   it("should correctly handle boolean edge cases (case-insensitive, falsy strings)", () => {
