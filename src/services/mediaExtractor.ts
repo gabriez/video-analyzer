@@ -45,6 +45,8 @@ export async function extractAudio(videoPath: string, outputPath: string): Promi
 
 /**
  * Extracts frames dynamically from a video using the requested fps filter.
+ * Scales frames down to a maximum width of 480px (maintaining aspect ratio)
+ * and applies JPEG compression (-q:v 4) to ensure payload fits comfortably within LLM API size limits.
  *
  * @param videoPath Absolute or relative path to the input video
  * @param outputDir Target directory to store extracted frames
@@ -62,7 +64,8 @@ export async function extractFrames(videoPath: string, outputDir: string, fps: s
   }
 
   const outputPattern = path.join(outputDir, "frames_%04d.jpg");
-  const args = ["-y", "-i", videoPath, "-vf", `fps=${fps}`, outputPattern];
+  const filter = `fps=${fps},scale='min(480,iw)':-2`;
+  const args = ["-y", "-i", videoPath, "-vf", filter, "-q:v", "4", outputPattern];
 
   try {
     await execFileAsync("ffmpeg", args);
