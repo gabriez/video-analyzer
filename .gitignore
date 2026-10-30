@@ -14,3 +14,9 @@
 
 # Test coverage
 /coverage
+
+# Database
+*.sqlite
+*.sqlite-journal
+*.sqlite3
+*.db

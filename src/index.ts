@@ -1,12 +1,25 @@
-import express from "express";
+import "reflect-metadata";
 
-const app = express();
-const port = process.env.PORT ?? "3000";
+import { createApp } from "./app.js";
+import { getConfig } from "./config.js";
+import { initializeDatabase } from "./database/appDataSource.js";
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
+const main = async () => {
+  const config = getConfig();
+  const app = createApp({ bearerToken: config.API_BEARER_TOKEN });
+  const port = config.PORT;
 
-app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`);
-});
+  try {
+    await initializeDatabase();
+    console.log("Database connected successfully (SQLite WAL mode)");
+
+    app.listen(port, () => {
+      console.log(`Video Analyzer API listening at http://localhost:${port}`);
+    });
+  } catch (error) {
+    console.error("Error connecting to database:", error);
+    process.exit(1);
+  }
+};
+
+main();

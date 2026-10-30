@@ -1,0 +1,80 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: video-analyzer-api
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3001}:3000"
+    environment:
+      - PORT=3000
+      - DB_DATABASE=/app/data/database.sqlite
+      - DB_LOGGING=false
+      - DB_SYNCHRONIZE=${DB_SYNCHRONIZE:-false}
+      - WHISPER_URL=${WHISPER_URL:-https://openrouter.ai/api/v1}
+      - WHISPER_MODEL=${WHISPER_MODEL:-openai/whisper-large-v3}
+      - API_BEARER_TOKEN=${API_BEARER_TOKEN:-secret-lan-token}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-dummy-key}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-google/gemini-2.5-flash}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - WEBHOOK_AUTH_HEADER=${WEBHOOK_AUTH_HEADER:-X-N8N-Webhook-Token}
+      - WEBHOOK_AUTH_TOKEN=${WEBHOOK_AUTH_TOKEN}
+      - TEMP_DIR=/app/temp
+    volumes:
+      - app-data:/app/data
+      - app-temp:/app/temp
+    depends_on:
+      - speaches
+    networks:
+      - video-network
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: video-analyzer-worker
+    restart: unless-stopped
+    command: ["node", "dist/src/worker.js"]
+    environment:
+      - DB_DATABASE=/app/data/database.sqlite
+      - DB_LOGGING=false
+      - DB_SYNCHRONIZE=false
+      - WHISPER_URL=${WHISPER_URL:-https://openrouter.ai/api/v1}
+      - WHISPER_MODEL=${WHISPER_MODEL:-openai/whisper-large-v3}
+      - API_BEARER_TOKEN=${API_BEARER_TOKEN:-secret-lan-token}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-dummy-key}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-google/gemini-2.5-flash}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - WEBHOOK_AUTH_HEADER=${WEBHOOK_AUTH_HEADER:-X-N8N-Webhook-Token}
+      - WEBHOOK_AUTH_TOKEN=${WEBHOOK_AUTH_TOKEN}
+      - TEMP_DIR=/app/temp
+      - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-3}
+    volumes:
+      - app-data:/app/data
+      - app-temp:/app/temp
+    depends_on:
+      - app
+      - speaches
+    networks:
+      - video-network
+
+  speaches:
+    image: ghcr.io/speaches-ai/speaches:latest-cpu
+    container_name: video-analyzer-speaches
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - speaches-cache:/root/.cache/huggingface
+    networks:
+      - video-network
+
+networks:
+  video-network:
+    driver: bridge
+
+volumes:
+  app-data:
+  app-temp:
+  speaches-cache:
