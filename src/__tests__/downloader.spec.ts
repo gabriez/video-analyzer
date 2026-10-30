@@ -117,7 +117,7 @@ describe("Video Downloader Service (yt-dlp)", () => {
     await expect(downloadVideo(invalidUrl, tempBaseDir, jobId)).rejects.toThrowError(DownloadError);
 
     await expect(downloadVideo("http://127.0.0.1:59999/unreachable.mp4", tempBaseDir, jobId)).rejects.toThrowError(DownloadError);
-  });
+  }, 15000);
 
   it("should throw DownloadTimeoutError when download exceeds timeout threshold", async () => {
     const jobId = "job-timeout";

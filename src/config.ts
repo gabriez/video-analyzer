@@ -46,6 +46,8 @@ export const configSchema = z.object({
   WEBHOOK_AUTH_TOKEN: optionalStringSchema,
   TEMP_DIR: z.string().min(1).default("/tmp/video-analyzer"),
   MAX_CONCURRENT_JOBS: z.coerce.number().int().positive().default(3),
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "silent"]).default("info"),
+  LOG_FORMAT: z.enum(["text", "json"]).default("text"),
 });
 
 export type { Config } from "./types/config.js";

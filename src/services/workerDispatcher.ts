@@ -2,8 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { getConfig } from "../config.js";
+import { logger as defaultLogger } from "../logger.js";
 import type { AiClients } from "../types/ai.js";
 import type { IResumeDatabaseService } from "../types/database.js";
+import type { Logger } from "../types/logger.js";
 import type { ResumeEntityDTO } from "../types/resume.js";
 import type { JobProcessorServices, ProcessJobOptions, WorkerDispatcherOptions } from "../types/worker.js";
 import { getAiClients } from "./aiClients.js";
@@ -46,6 +48,7 @@ export async function processJob(job: ResumeEntityDTO, options: ProcessJobOption
   const databaseService = options.databaseService ?? getResumeDatabaseService();
   const services = options.services ?? defaultJobProcessorServices;
   const aiClients = options.aiClients ?? getAiClients();
+  const jobLogger = (options.logger ?? defaultLogger).child({ context: "Worker", jobId: job.id });
 
   let tempDir = options.tempDir;
   if (!tempDir) {
@@ -57,13 +60,45 @@ export async function processJob(job: ResumeEntityDTO, options: ProcessJobOption
   }
 
   const jobDir = path.join(tempDir, String(job.id));
+  const jobStartTime = Date.now();
+
+  jobLogger.info(
+    {
+      telegramId: job.telegramId,
+      videoUrl: job.videoUrl,
+    },
+    "Starting video analysis pipeline",
+  );
 
   try {
     // 1. Download video
+    jobLogger.info({ url: job.videoUrl }, "[1/7] Downloading video via yt-dlp...");
+    const downloadStart = Date.now();
     const videoPath = await services.downloadVideo(job.videoUrl, tempDir, String(job.id));
+    const downloadDuration = Date.now() - downloadStart;
+    const sizeBytes = fs.existsSync(videoPath) ? fs.statSync(videoPath).size : 0;
+    const sizeMB = (sizeBytes / (1024 * 1024)).toFixed(2);
+    jobLogger.info(
+      {
+        videoPath,
+        sizeBytes,
+        durationMs: downloadDuration,
+      },
+      `[1/7] Video downloaded successfully in ${downloadDuration}ms (${sizeMB} MB)`,
+    );
 
     // 2. Check for audio stream
+    jobLogger.info("[2/7] Probing media stream for audio track...");
+    const probeStart = Date.now();
     const audioPresent = await services.hasAudioStream(videoPath);
+    const probeDuration = Date.now() - probeStart;
+    jobLogger.info(
+      {
+        hasAudio: audioPresent,
+        durationMs: probeDuration,
+      },
+      `[2/7] Audio stream probe completed in ${probeDuration}ms (hasAudio: ${audioPresent})`,
+    );
 
     let transcription: string | null = null;
     let fps = "1";
@@ -71,42 +106,90 @@ export async function processJob(job: ResumeEntityDTO, options: ProcessJobOption
     // 3. Audio extraction & STT (reusing persistent whisperClient)
     if (audioPresent) {
       const audioPath = path.join(jobDir, "audio.mp3");
+      jobLogger.info("[3/7] Extracting audio track to MP3 (16kHz mono)...");
+      const audioStart = Date.now();
       await services.extractAudio(videoPath, audioPath);
+      jobLogger.info(`[3/7] Audio track extracted in ${Date.now() - audioStart}ms`);
+
+      jobLogger.info("[3/7] Transcribing audio with Whisper...");
+      const sttStart = Date.now();
       transcription = await services.transcribeAudio(audioPath, {
         client: aiClients.whisperClient,
       });
+      const sttDuration = Date.now() - sttStart;
+      jobLogger.info(
+        {
+          charsLength: transcription?.length ?? 0,
+          durationMs: sttDuration,
+        },
+        `[3/7] Audio transcribed in ${sttDuration}ms (${transcription?.length ?? 0} chars)`,
+      );
 
       if (transcription && transcription.trim().length > 0) {
         fps = "1/1.5";
       } else {
         fps = "1";
       }
+      jobLogger.info(`[3/7] Adaptive sampling set to ${fps} fps (${fps === "1/1.5" ? "speech detected" : "inaudible audio"})`);
     } else {
+      jobLogger.info("[3/7] No audio stream detected; skipping audio extraction and STT. Setting sampling to 1 fps");
       transcription = null;
       fps = "1";
     }
 
     // 4. Extract frames
     const framesDir = path.join(jobDir, "frames");
+    jobLogger.info(`[4/7] Extracting video frames at ${fps} fps...`);
+    const framesStart = Date.now();
     const framePaths = await services.extractFrames(videoPath, framesDir, fps);
+    const framesDuration = Date.now() - framesStart;
+    jobLogger.info(
+      {
+        frameCount: framePaths.length,
+        fps,
+        durationMs: framesDuration,
+      },
+      `[4/7] Extracted ${framePaths.length} video frames in ${framesDuration}ms`,
+    );
 
     // 5. Vision analysis (reusing persistent visionClient)
+    jobLogger.info(
+      {
+        frameCount: framePaths.length,
+        hasTranscription: Boolean(transcription && transcription.length > 0),
+      },
+      `[5/7] Analyzing ${framePaths.length} visual frames with multimodal LLM...`,
+    );
+    const visionStart = Date.now();
     const summary = await services.analyzeVideoContext({
       transcription,
       framePaths,
       client: aiClients.visionClient,
     });
+    const visionDuration = Date.now() - visionStart;
+    jobLogger.info(
+      {
+        summaryLength: summary.length,
+        durationMs: visionDuration,
+      },
+      `[5/7] Vision analysis completed in ${visionDuration}ms (${summary.length} chars)`,
+    );
 
     // 6. Update database state to Processed
+    jobLogger.info("[6/7] Updating job status to Processed in database...");
+    const dbStart = Date.now();
     await databaseService.markProcessed(job.id, {
       content: summary,
       transcription,
       hasAudio: audioPresent,
     });
+    jobLogger.info(`[6/7] Database updated to Processed in ${Date.now() - dbStart}ms`);
 
     // 7. Deliver webhook notification
     try {
-      await services.sendWebhookNotification({
+      jobLogger.info("[7/7] Delivering webhook notification...");
+      const webhookStart = Date.now();
+      const webhookResult = await services.sendWebhookNotification({
         jobId: String(job.id),
         telegramId: job.telegramId,
         videoUrl: job.videoUrl,
@@ -116,20 +199,42 @@ export async function processJob(job: ResumeEntityDTO, options: ProcessJobOption
         completedAt: new Date().toISOString(),
       });
       await databaseService.markSent(job.id, new Date());
-    } catch (_webhookErr) {
+      jobLogger.info(
+        `[7/7] Webhook delivered successfully in ${Date.now() - webhookStart}ms (attempts: ${webhookResult?.attempts ?? 1}). Job status marked as Sent.`,
+      );
+    } catch (webhookErr) {
       // Non-fatal to analysis: record retry metadata via database service
+      jobLogger.warn(`[7/7] Webhook delivery failed: ${webhookErr instanceof Error ? webhookErr.message : String(webhookErr)}. Scheduling retry.`);
       await databaseService.recordDeliveryFailure(job.id, new Date(Date.now() + 60_000));
     }
+
+    const totalJobDuration = Date.now() - jobStartTime;
+    jobLogger.info(
+      {
+        totalDurationMs: totalJobDuration,
+      },
+      `Job #${job.id} completed successfully in ${totalJobDuration}ms`,
+    );
   } catch (error) {
+    const totalJobDuration = Date.now() - jobStartTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
+    jobLogger.error(
+      {
+        err: error,
+        totalDurationMs: totalJobDuration,
+        errorMessage,
+      },
+      `Job #${job.id} FAILED after ${totalJobDuration}ms: ${errorMessage}`,
+    );
     await databaseService.markFailed(job.id, errorMessage);
   } finally {
     // 8. Guaranteed individual job directory garbage collection
     if (fs.existsSync(jobDir)) {
       try {
         fs.rmSync(jobDir, { recursive: true, force: true });
+        jobLogger.debug(`Scratchpad directory cleaned up: ${jobDir}`);
       } catch (rmErr) {
-        console.error(`Failed to clean up job scratchpad at ${jobDir}:`, rmErr);
+        jobLogger.error({ err: rmErr }, `Failed to clean up job scratchpad at ${jobDir}`);
       }
     }
   }
@@ -150,12 +255,14 @@ export class WorkerDispatcher {
   private readonly tempDir: string;
   private readonly services: JobProcessorServices;
   private readonly pollIntervalMs: number;
+  private readonly logger: Logger;
 
   constructor(options: WorkerDispatcherOptions = {}) {
     this.databaseService = options.databaseService ?? getResumeDatabaseService();
     this.aiClients = options.aiClients ?? getAiClients();
     this.services = options.services ?? defaultJobProcessorServices;
     this.pollIntervalMs = options.pollIntervalMs ?? 1000;
+    this.logger = (options.logger ?? defaultLogger).child({ context: "Dispatcher" });
 
     let defaultMaxConcurrency = 3;
     let defaultTempDir = "/tmp/video-analyzer";
@@ -175,11 +282,24 @@ export class WorkerDispatcher {
   start(): void {
     if (this.isRunning) return;
     this.isRunning = true;
+    this.logger.info(
+      {
+        maxConcurrency: this.maxConcurrency,
+        pollIntervalMs: this.pollIntervalMs,
+      },
+      "WorkerDispatcher pool started",
+    );
     this.loopPromise = this.runLoop();
   }
 
   async stop(): Promise<void> {
     this.isRunning = false;
+    this.logger.info(
+      {
+        activeJobs: this.runningJobs.size,
+      },
+      "WorkerDispatcher stopping, awaiting in-flight jobs...",
+    );
     if (this.loopPromise) {
       await this.loopPromise;
       this.loopPromise = null;
@@ -188,6 +308,7 @@ export class WorkerDispatcher {
     if (this.runningJobs.size > 0) {
       await Promise.allSettled(Array.from(this.runningJobs));
     }
+    this.logger.info("WorkerDispatcher stopped cleanly.");
   }
 
   private async runLoop(): Promise<void> {
@@ -203,6 +324,16 @@ export class WorkerDispatcher {
           const job = await this.databaseService.claimNextPending();
           if (job) {
             jobClaimed = true;
+            this.logger.info(
+              {
+                jobId: job.id,
+                telegramId: job.telegramId,
+                videoUrl: job.videoUrl,
+                activePoolSize: this.runningJobs.size + 1,
+                maxConcurrency: this.maxConcurrency,
+              },
+              `Claimed job #${job.id} for processing`,
+            );
             this.dispatchJob(job);
           } else {
             // No more pending jobs currently available
@@ -227,8 +358,17 @@ export class WorkerDispatcher {
       aiClients: this.aiClients,
       tempDir: this.tempDir,
       services: this.services,
+      logger: this.logger,
     }).finally(() => {
       this.runningJobs.delete(jobPromise);
+      this.logger.debug(
+        {
+          jobId: job.id,
+          remainingActive: this.runningJobs.size,
+          maxConcurrency: this.maxConcurrency,
+        },
+        `Job #${job.id} released from dispatcher pool`,
+      );
     });
 
     this.runningJobs.add(jobPromise);

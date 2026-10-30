@@ -6,6 +6,7 @@ import type { analyzeVideoContext } from "../services/visionService.js";
 import type { sendWebhookNotification } from "../services/webhookService.js";
 import type { AiClients } from "./ai.js";
 import type { IResumeDatabaseService } from "./database.js";
+import type { Logger } from "./logger.js";
 
 export interface JobProcessorServices {
   downloadVideo: typeof downloadVideo;
@@ -22,6 +23,7 @@ export interface ProcessJobOptions {
   aiClients?: AiClients;
   tempDir?: string;
   services?: JobProcessorServices;
+  logger?: Logger;
 }
 
 export interface WorkerDispatcherOptions {
@@ -31,4 +33,5 @@ export interface WorkerDispatcherOptions {
   tempDir?: string;
   services?: JobProcessorServices;
   pollIntervalMs?: number;
+  logger?: Logger;
 }

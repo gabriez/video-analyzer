@@ -24,6 +24,8 @@ The configuration is strictly validated on startup using **Zod** (`src/config.ts
 | `WEBHOOK_AUTH_TOKEN`  |    No     | —                              | Secret token value associated with `WEBHOOK_AUTH_HEADER`. Omitted from headers if undefined or empty.                                                                            |
 | `TEMP_DIR`            |    No     | `/tmp/video-analyzer`          | Scratchpad directory where downloaded videos, extracted audio (`.mp3`), and frame sequences (`.jpg`) are stored during processing. Cleaned up immediately after task completion. |
 | `MAX_CONCURRENT_JOBS` |    No     | `3`                            | Maximum number of video analysis jobs processed simultaneously by the background worker pool to avoid CPU/RAM saturation.                                                        |
+| `LOG_LEVEL`           |    No     | `info`                         | Minimum log level emitted to standard output/error (`debug`, `info`, `warn`, `error`, `silent`).                                                                                 |
+| `LOG_FORMAT`          |    No     | `text`                         | Logging serialization format: formatted human-readable (`text`) or single-line structured JSON (`json`) for aggregators (Loki, Datadog).                                         |
 
 ---
 

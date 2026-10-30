@@ -149,4 +149,22 @@ describe("Database Configuration & ResumeEntity Lifecycle (SQLite)", () => {
     expect(pendingJobs[1]?.telegramId).toBe("user-2");
     expect(pendingJobs[2]?.telegramId).toBe("user-3");
   });
+
+  it("should claim next pending job with properly mapped camelCase videoUrl and telegramId", async () => {
+    const { ResumeDatabaseService } = await import("#services/database/resumeDatabaseService.js");
+    const service = new ResumeDatabaseService(AppDataSource);
+
+    await service.createAndSave({
+      telegramId: "tg-claim-test-123",
+      videoUrl: "https://www.youtube.com/watch?v=J1-44DvwG68",
+    });
+
+    const claimed = await service.claimNextPending();
+
+    expect(claimed).not.toBeNull();
+    expect(claimed?.telegramId).toBe("tg-claim-test-123");
+    expect(claimed?.videoUrl).toBe("https://www.youtube.com/watch?v=J1-44DvwG68");
+    expect(claimed?.status).toBe(ResumeStatus.InProgress);
+    expect(claimed?.id).toBeDefined();
+  });
 });

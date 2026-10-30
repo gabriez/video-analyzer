@@ -42,18 +42,27 @@ export class ResumeDatabaseService implements IResumeDatabaseService {
     // En SQLite WAL mode, BEGIN IMMEDIATE bloquea escrituras concurrentes de inmediato
     await queryRunner.query("BEGIN IMMEDIATE;");
     try {
-      const rows = await queryRunner.query("SELECT id FROM resumes WHERE status = 'created' ORDER BY create_at ASC LIMIT 1;");
+      const rows = (await queryRunner.query("SELECT * FROM resumes WHERE status = 'created' ORDER BY create_at ASC LIMIT 1;")) as RawResumeEntity[];
+
       if (!rows || rows.length === 0) {
         await queryRunner.query("COMMIT;");
         return null;
       }
 
-      const id = rows[0].id;
-      await queryRunner.query("UPDATE resumes SET status = 'in_progress', locked_at = CURRENT_TIMESTAMP WHERE id = ?;", [id]);
+      const row = rows[0];
+      if (!row) {
+        await queryRunner.query("COMMIT;");
+        return null;
+      }
+
+      await queryRunner.query("UPDATE resumes SET status = 'in_progress', locked_at = CURRENT_TIMESTAMP WHERE id = ?;", [row.id]);
       await queryRunner.query("COMMIT;");
 
-      const entity = await this.findById(id);
-      return entity ? fromSqlToEntity(entity as unknown as RawResumeEntity) : null;
+      return toResumeDTO({
+        ...row,
+        status: ResumeStatus.InProgress,
+        locked_at: new Date(),
+      });
     } catch (err) {
       await queryRunner.query("ROLLBACK;");
       throw err;
@@ -155,19 +164,22 @@ export function getResumeDatabaseService(dataSource: DataSource = AppDataSource)
   return defaultResumeDatabaseService;
 }
 
-function fromSqlToEntity(rawEntity: RawResumeEntity): ResumeEntityDTO {
+export function toResumeDTO(entity: ResumeEntity | RawResumeEntity): ResumeEntityDTO {
+  const e = entity as unknown as Record<string, unknown>;
   return {
-    id: rawEntity.id,
-    content: rawEntity.content,
-    deliveryAttempts: rawEntity.delivery_attempts,
-    status: rawEntity.status,
-    telegramId: rawEntity.telegram_id,
-    transcription: rawEntity.transcription,
-    videoUrl: rawEntity.video_url,
-    deliveredAt: rawEntity.delivered_at,
-    errorMessage: rawEntity.error_message,
-    hasAudio: rawEntity.has_audio,
-    lockedAt: rawEntity.locked_at,
-    nextDeliveryRetryAt: rawEntity.next_delivery_retry_at,
+    id: Number(e.id),
+    content: (e.content as string | null) ?? null,
+    deliveryAttempts: Number(e.deliveryAttempts ?? e.delivery_attempts ?? 0),
+    status: e.status as ResumeStatus,
+    telegramId: String(e.telegramId ?? e.telegram_id ?? ""),
+    transcription: (e.transcription as string | null) ?? null,
+    videoUrl: String(e.videoUrl ?? e.video_url ?? ""),
+    deliveredAt: (e.deliveredAt as Date | null) ?? (e.delivered_at as Date | null) ?? null,
+    errorMessage: (e.errorMessage as string | null) ?? (e.error_message as string | null) ?? null,
+    hasAudio: (e.hasAudio as boolean | null) ?? (e.has_audio as boolean | null) ?? false,
+    lockedAt: (e.lockedAt as Date | null) ?? (e.locked_at as Date | null) ?? null,
+    nextDeliveryRetryAt: (e.nextDeliveryRetryAt as Date | null) ?? (e.next_delivery_retry_at as Date | null) ?? null,
   };
 }
+
+export const fromSqlToEntity = toResumeDTO;

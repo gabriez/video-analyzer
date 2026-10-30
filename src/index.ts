@@ -2,25 +2,55 @@ import "reflect-metadata";
 
 import { createApp } from "./app.js";
 import { getConfig } from "./config.js";
-import { initializeDatabase } from "./database/appDataSource.js";
+import AppDataSource, { initializeDatabase } from "./database/appDataSource.js";
+import { logger } from "./logger.js";
 
 const main = async () => {
   const config = getConfig();
-  const app = createApp({ bearerToken: config.API_BEARER_TOKEN });
+  const apiLogger = logger.child({ context: "API" });
+  const app = createApp({ bearerToken: config.API_BEARER_TOKEN, logger: apiLogger });
   const port = config.PORT;
   const host = config.HOST;
 
   try {
     await initializeDatabase();
-    console.log("Database connected successfully (SQLite WAL mode)");
+    apiLogger.info(
+      {
+        database: config.DB_DATABASE,
+        mode: "SQLite WAL",
+      },
+      "Database connected successfully",
+    );
 
-    app.listen(port, host, () => {
-      console.log(`Video Analyzer API listening at http://${host}:${port}`);
+    const server = app.listen(port, host, () => {
+      apiLogger.info(
+        {
+          host,
+          port,
+          env: process.env.NODE_ENV || "development",
+          logLevel: config.LOG_LEVEL,
+        },
+        `Video Analyzer API listening at http://${host}:${port}`,
+      );
     });
+
+    const shutdown = (signal: string) => {
+      apiLogger.info(`Received ${signal}. Gracefully stopping API server...`);
+      server.close(async () => {
+        if (AppDataSource.isInitialized) {
+          await AppDataSource.destroy();
+        }
+        apiLogger.info("API server stopped cleanly.");
+        process.exit(0);
+      });
+    };
+
+    process.on("SIGINT", () => shutdown("SIGINT"));
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
   } catch (error) {
-    console.error("Error connecting to database:", error);
+    apiLogger.error({ err: error }, "Fatal error starting API server");
     process.exit(1);
   }
 };
 
-main();
+void main();
