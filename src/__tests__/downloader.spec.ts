@@ -3,12 +3,15 @@ import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { DownloadError, DownloadTimeoutError, downloadVideo } from "../services/downloader.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 describe("Video Downloader Service (yt-dlp)", () => {
-  let server: http.Server;
+  let server: http.Server | undefined;
   let serverPort: number;
   let baseUrl: string;
   let tempBaseDir: string;
@@ -16,15 +19,10 @@ describe("Video Downloader Service (yt-dlp)", () => {
 
   beforeAll(async () => {
     tempBaseDir = fs.mkdtempSync(path.join(os.tmpdir(), "downloader-fixtures-"));
-    sampleVideoPath = path.join(tempBaseDir, "sample-720p.mp4");
-
-    // Generate a synthetic 720p MP4 fixture using ffmpeg
-    execSync(`ffmpeg -y -f lavfi -i testsrc=duration=3:size=1280x720:rate=30 -c:v libx264 -pix_fmt yuv420p "${sampleVideoPath}"`, {
-      stdio: "ignore",
-    });
+    sampleVideoPath = path.resolve(__dirname, "fixtures/video_with_audio.mp4");
 
     // Start a deterministic mock HTTP server for video delivery and edge cases
-    server = http.createServer((req, res) => {
+    const localServer = http.createServer((req, res) => {
       const url = req.url ?? "";
 
       if (url === "/valid-video.mp4") {
@@ -57,10 +55,11 @@ describe("Video Downloader Service (yt-dlp)", () => {
       res.writeHead(400, { "Content-Type": "text/plain" });
       res.end("Bad Request");
     });
+    server = localServer;
 
     await new Promise<void>((resolve) => {
-      server.listen(0, "127.0.0.1", () => {
-        const address = server.address();
+      localServer.listen(0, "127.0.0.1", () => {
+        const address = localServer.address();
         if (address && typeof address === "object") {
           serverPort = address.port;
           baseUrl = `http://127.0.0.1:${serverPort}`;
@@ -71,9 +70,12 @@ describe("Video Downloader Service (yt-dlp)", () => {
   }, 20000);
 
   afterAll(async () => {
-    await new Promise<void>((resolve) => {
-      server.close(() => resolve());
-    });
+    if (server) {
+      const activeServer = server;
+      await new Promise<void>((resolve) => {
+        activeServer.close(() => resolve());
+      });
+    }
     if (tempBaseDir && fs.existsSync(tempBaseDir)) {
       fs.rmSync(tempBaseDir, { recursive: true, force: true });
     }

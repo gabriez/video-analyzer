@@ -2,10 +2,13 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { extractAudio, extractFrames, MediaExtractionError } from "../services/mediaExtractor.js";
 import { hasAudioStream, MediaProbeError } from "../services/mediaProbe.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe("Media Probing and Extraction Services (FFprobe & FFmpeg)", () => {
   let fixturesDir: string;
@@ -18,20 +21,11 @@ describe("Media Probing and Extraction Services (FFprobe & FFmpeg)", () => {
     fixturesDir = fs.mkdtempSync(path.join(os.tmpdir(), "media-fixtures-"));
     outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "media-output-"));
 
-    videoWithAudioPath = path.join(fixturesDir, "video_with_audio_5s.mp4");
-    videoSilentPath = path.join(fixturesDir, "video_silent_5s.mp4");
+    videoWithAudioPath = path.resolve(__dirname, "fixtures/video_with_audio.mp4");
+    videoSilentPath = path.resolve(__dirname, "fixtures/video_silent.mp4");
     corruptVideoPath = path.join(fixturesDir, "corrupt_video.mp4");
 
-    // 1. Synthetic 5-second video with testsrc + 1000Hz sine wave audio
-    execSync(
-      `ffmpeg -y -f lavfi -i testsrc=duration=5:size=320x240:rate=30 -f lavfi -i sine=frequency=1000:duration=5 -c:v libx264 -pix_fmt yuv420p -c:a aac "${videoWithAudioPath}"`,
-      { stdio: "ignore" },
-    );
-
-    // 2. Synthetic 5-second video with testsrc only (no audio stream)
-    execSync(`ffmpeg -y -f lavfi -i testsrc=duration=5:size=320x240:rate=30 -c:v libx264 -pix_fmt yuv420p "${videoSilentPath}"`, { stdio: "ignore" });
-
-    // 3. Corrupt dummy file
+    // Corrupt dummy file for negative testing
     fs.writeFileSync(corruptVideoPath, Buffer.from("THIS_IS_DEFINITELY_NOT_A_VALID_MP4_FILE_BYTES"));
   });
 
