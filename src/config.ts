@@ -20,7 +20,7 @@ const optionalUrlSchema = z
     const trimmed = val?.trim();
     return trimmed === "" ? undefined : trimmed;
   })
-  .pipe(z.string().url().optional());
+  .pipe(z.url().optional());
 
 const optionalStringSchema = z
   .string()
@@ -32,6 +32,7 @@ const optionalStringSchema = z
 
 export const configSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
+  HOST: z.string().default("0.0.0.0"),
   DB_DATABASE: z.string().min(1).default("database.sqlite"),
   DB_LOGGING: booleanEnvSchema.default(false),
   DB_SYNCHRONIZE: booleanEnvSchema.default(false),
