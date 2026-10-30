@@ -96,7 +96,7 @@ describe("Media Probing and Extraction Services (FFprobe & FFmpeg)", () => {
       }
     });
 
-    it("should extract exactly 5 JPEG frames when fps = '1'", async () => {
+    it("should extract exactly 5 JPEG frames when fps = '1' and downscale width to max 480px", async () => {
       const framesDir = path.join(outputDir, "frames_1");
       fs.mkdirSync(framesDir, { recursive: true });
 
@@ -108,6 +108,13 @@ describe("Media Probing and Extraction Services (FFprobe & FFmpeg)", () => {
         expect(fs.existsSync(framePath)).toBe(true);
         expect(framePath.endsWith(".jpg")).toBe(true);
         expect(fs.statSync(framePath).size).toBeGreaterThan(0);
+
+        // Verify with ffprobe that frame width does not exceed 480px
+        const probeJson = execSync(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of json "${framePath}"`).toString();
+        const probe = JSON.parse(probeJson);
+        const width = probe.streams?.[0]?.width;
+        expect(width).toBeDefined();
+        expect(width).toBeLessThanOrEqual(480);
       }
     });
 
