@@ -35,7 +35,7 @@ Add these secrets in GitHub under **Settings > Secrets and variables > Actions >
 | --------------------- | -------------------------------------------------------- | ---------------------------------------- |
 | `PROXMOX_HOST`        | IP or domain of your Proxmox VM                          | `192.168.1.150`                          |
 | `PROXMOX_USER`        | Deploy user on the VM                                    | `deploy`                                 |
-| `PROXMOX_VM_SSH_KEY`     | Private SSH key for the user                             | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
+| `PROXMOX_VM_SSH_KEY`  | Private SSH key for the user                             | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
 | `PROD_ENV`            | Full content of your production `.env` file              | _(Paste raw .env content here)_          |
 | `PROXMOX_SSH_PORT`    | _(Optional, default: 22)_                                | `22`                                     |
 | `PROXMOX_DEPLOY_PATH` | _(Optional, default: `/opt/video-analyzer`)_             | `/opt/video-analyzer`                    |
