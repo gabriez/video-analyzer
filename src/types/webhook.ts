@@ -2,6 +2,9 @@ export interface WebhookPayload {
   jobId: string;
   telegramId: string;
   videoUrl: string;
+  originalPrompt: string | null;
+  analysisPrompt: string | null;
+  storagePrompt: string | null;
   hasTranscription: boolean;
   transcription: string | null;
   summary: string;

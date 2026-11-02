@@ -26,6 +26,9 @@ export class ResumeDatabaseService implements IResumeDatabaseService {
     const entity = this.repository.create({
       telegramId: data.telegramId,
       videoUrl: data.videoUrl,
+      originalPrompt: data.originalPrompt ?? null,
+      analysisPrompt: data.analysisPrompt ?? null,
+      storagePrompt: data.storagePrompt ?? null,
       status: ResumeStatus.Created,
     });
     return await this.repository.save(entity);
@@ -174,6 +177,9 @@ export function toResumeDTO(entity: ResumeEntity | RawResumeEntity): ResumeEntit
     telegramId: String(e.telegramId ?? e.telegram_id ?? ""),
     transcription: (e.transcription as string | null) ?? null,
     videoUrl: String(e.videoUrl ?? e.video_url ?? ""),
+    originalPrompt: (e.originalPrompt as string | null) ?? (e.original_prompt as string | null) ?? null,
+    analysisPrompt: (e.analysisPrompt as string | null) ?? (e.analysis_prompt as string | null) ?? null,
+    storagePrompt: (e.storagePrompt as string | null) ?? (e.storage_prompt as string | null) ?? null,
     deliveredAt: (e.deliveredAt as Date | null) ?? (e.delivered_at as Date | null) ?? null,
     errorMessage: (e.errorMessage as string | null) ?? (e.error_message as string | null) ?? null,
     hasAudio: (e.hasAudio as boolean | null) ?? (e.has_audio as boolean | null) ?? false,

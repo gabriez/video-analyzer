@@ -10,6 +10,9 @@ import type { Logger } from "../types/logger.js";
 export const analyzeRequestSchema = z.object({
   telegramId: z.string().min(1, "telegramId is required"),
   url: z.url("A valid video URL is required"),
+  originalPrompt: z.string().optional(),
+  analysisPrompt: z.string().optional(),
+  storagePrompt: z.string().optional(),
 });
 
 export type { AnalyzeRequest } from "../types/api.js";
@@ -84,6 +87,9 @@ export function createSubmitAnalyzeJobHandler(
       const savedJob = await databaseService.createAndSave({
         telegramId: parseResult.data.telegramId,
         videoUrl: parseResult.data.url,
+        originalPrompt: parseResult.data.originalPrompt,
+        analysisPrompt: parseResult.data.analysisPrompt,
+        storagePrompt: parseResult.data.storagePrompt,
       });
 
       reqLogger.info(
@@ -91,6 +97,9 @@ export function createSubmitAnalyzeJobHandler(
           jobId: savedJob.id,
           telegramId: parseResult.data.telegramId,
           videoUrl: parseResult.data.url,
+          hasOriginalPrompt: Boolean(parseResult.data.originalPrompt),
+          hasAnalysisPrompt: Boolean(parseResult.data.analysisPrompt),
+          hasStoragePrompt: Boolean(parseResult.data.storagePrompt),
           status: savedJob.status,
           durationMs: Date.now() - enqueueStart,
         },

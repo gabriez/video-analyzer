@@ -157,6 +157,7 @@ export async function processJob(job: ResumeEntityDTO, options: ProcessJobOption
       {
         frameCount: framePaths.length,
         hasTranscription: Boolean(transcription && transcription.length > 0),
+        hasAnalysisPrompt: Boolean(job.analysisPrompt),
       },
       `[5/7] Analyzing ${framePaths.length} visual frames with multimodal LLM...`,
     );
@@ -164,6 +165,7 @@ export async function processJob(job: ResumeEntityDTO, options: ProcessJobOption
     const summary = await services.analyzeVideoContext({
       transcription,
       framePaths,
+      analysisPrompt: job.analysisPrompt,
       client: aiClients.visionClient,
     });
     const visionDuration = Date.now() - visionStart;
@@ -193,6 +195,9 @@ export async function processJob(job: ResumeEntityDTO, options: ProcessJobOption
         jobId: String(job.id),
         telegramId: job.telegramId,
         videoUrl: job.videoUrl,
+        originalPrompt: job.originalPrompt ?? null,
+        analysisPrompt: job.analysisPrompt ?? null,
+        storagePrompt: job.storagePrompt ?? null,
         hasTranscription: Boolean(transcription && transcription.length > 0),
         transcription: transcription ?? null,
         summary,

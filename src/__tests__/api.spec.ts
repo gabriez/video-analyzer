@@ -82,7 +82,44 @@ describe("HTTP API Endpoints - POST /api/v1/analyze", () => {
     expect(savedEntity).toBeDefined();
     expect(savedEntity?.telegramId).toBe("tg-user-777");
     expect(savedEntity?.videoUrl).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    expect(savedEntity?.originalPrompt).toBeNull();
+    expect(savedEntity?.analysisPrompt).toBeNull();
+    expect(savedEntity?.storagePrompt).toBeNull();
     expect(savedEntity?.status).toBe(ResumeStatus.Created);
+  });
+
+  it("should persist originalPrompt, analysisPrompt and storagePrompt when provided", async () => {
+    const payload = {
+      telegramId: "tg-user-888",
+      url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      originalPrompt: "Guarda este video y dame los pasos en categoria tejer",
+      analysisPrompt: "dame los pasos mencionados alli",
+      storagePrompt: "guardalos en una categoria llamada tejer",
+    };
+
+    const response = await fetch(`${baseUrl}/api/v1/analyze`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${TEST_BEARER_TOKEN}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    expect(response.status).toBe(202);
+
+    const body = (await response.json()) as {
+      jobId: string;
+      status: string;
+      message: string;
+    };
+
+    const savedEntity = await databaseService.findById(Number(body.jobId));
+    expect(savedEntity).toBeDefined();
+    expect(savedEntity?.telegramId).toBe("tg-user-888");
+    expect(savedEntity?.originalPrompt).toBe("Guarda este video y dame los pasos en categoria tejer");
+    expect(savedEntity?.analysisPrompt).toBe("dame los pasos mencionados alli");
+    expect(savedEntity?.storagePrompt).toBe("guardalos en una categoria llamada tejer");
   });
 
   it("should return 400 Bad Request with structured errors when url is missing or not a valid URL", async () => {

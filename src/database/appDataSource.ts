@@ -3,10 +3,12 @@ import "reflect-metadata";
 import { DataSource } from "typeorm";
 
 import { dataSourceOptionsCommon } from "./databaseConfig.js";
+import { CoreSchema1793339353588 } from "./migrations/1793339353588-coreSchema.js";
+import { AddPromptsToResumes1793643300924 } from "./migrations/1793643300924-addPromptsToResumes.js";
 
 const AppDataSource = new DataSource({
   ...dataSourceOptionsCommon,
-  migrations: [],
+  migrations: [CoreSchema1793339353588, AddPromptsToResumes1793643300924],
 });
 
 /**

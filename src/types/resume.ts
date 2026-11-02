@@ -13,6 +13,12 @@ export interface RawResumeEntity {
 
   video_url: string;
 
+  original_prompt?: string | null;
+
+  analysis_prompt?: string | null;
+
+  storage_prompt?: string | null;
+
   status: ResumeStatus;
 
   has_audio?: boolean | null;
@@ -38,6 +44,12 @@ export interface ResumeEntityDTO {
   telegramId: string;
 
   videoUrl: string;
+
+  originalPrompt?: string | null;
+
+  analysisPrompt?: string | null;
+
+  storagePrompt?: string | null;
 
   status: ResumeStatus;
 

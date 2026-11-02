@@ -4,6 +4,9 @@ import type { ResumeEntityDTO } from "./resume.js";
 export interface CreateResumeData {
   telegramId: string;
   videoUrl: string;
+  originalPrompt?: string | null;
+  analysisPrompt?: string | null;
+  storagePrompt?: string | null;
 }
 
 export interface MarkProcessedData {

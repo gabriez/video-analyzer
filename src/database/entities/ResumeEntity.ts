@@ -19,6 +19,27 @@ export class ResumeEntity extends CoreEntity {
   videoUrl!: string;
 
   @Column({
+    type: "text",
+    name: "original_prompt",
+    nullable: true,
+  })
+  originalPrompt!: string | null;
+
+  @Column({
+    type: "text",
+    name: "analysis_prompt",
+    nullable: true,
+  })
+  analysisPrompt!: string | null;
+
+  @Column({
+    type: "text",
+    name: "storage_prompt",
+    nullable: true,
+  })
+  storagePrompt!: string | null;
+
+  @Column({
     enum: ResumeStatus,
     type: "simple-enum",
     default: ResumeStatus.Created,

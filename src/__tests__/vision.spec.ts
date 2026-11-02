@@ -81,6 +81,34 @@ describe("Vision Multimodal Service (OpenRouter / Gemini Flash)", () => {
     expect(imageParts[0].image_url.url).toContain("data:image/jpeg;base64,");
   });
 
+  it("should prepend custom analysisPrompt to user content when provided", async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: "1. Primer paso\n2. Segundo paso",
+          },
+        },
+      ],
+    });
+
+    const result = await analyzeVideoContext({
+      transcription: "Video con audio de receta",
+      analysisPrompt: "dame los pasos mencionados alli",
+      framePaths: [frame1Path],
+      apiKey: "sk-or-test-key",
+      model: "google/gemini-2.5-flash",
+    });
+
+    expect(result).toBe("1. Primer paso\n2. Segundo paso");
+    const callArgs = mockCreate.mock.calls[0][0];
+    const userMessage = callArgs.messages.find((m: { role: string }) => m.role === "user");
+    const textParts = userMessage.content.filter((p: { type: string }) => p.type === "text");
+
+    expect(textParts.some((p: { text: string }) => p.text.includes("dame los pasos mencionados alli"))).toBe(true);
+    expect(textParts.some((p: { text: string }) => p.text.includes("User Analysis Request"))).toBe(true);
+  });
+
   it("should adapt prompt when transcription is null (silent video)", async () => {
     mockCreate.mockResolvedValueOnce({
       choices: [

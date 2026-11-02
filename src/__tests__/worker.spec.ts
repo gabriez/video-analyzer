@@ -307,4 +307,56 @@ describe("Background Worker & Pool Dispatcher Concurrency", () => {
     const updated = await databaseService.findById(job.id);
     expect(updated?.status).toBe(ResumeStatus.Sent);
   });
+
+  it("should forward prompts to visionService and webhook notification", async () => {
+    const job = await databaseService.createAndSave({
+      telegramId: "prompt-user",
+      videoUrl: "https://example.com/prompts.mp4",
+      originalPrompt: "Guarda este video y resume los pasos en tejer",
+      analysisPrompt: "dame los pasos mencionados",
+      storagePrompt: "categoria tejer",
+    });
+
+    let capturedVisionOptions: unknown = null;
+    let capturedWebhookPayload: unknown = null;
+
+    const mockServices: JobProcessorServices = {
+      downloadVideo: vi.fn().mockResolvedValue("/tmp/prompts.mp4"),
+      hasAudioStream: vi.fn().mockResolvedValue(false),
+      extractAudio: vi.fn().mockResolvedValue("/tmp/audio.mp3"),
+      transcribeAudio: vi.fn().mockResolvedValue(""),
+      extractFrames: vi.fn().mockResolvedValue([]),
+      analyzeVideoContext: vi.fn().mockImplementation(async (opts) => {
+        capturedVisionOptions = opts;
+        return "Pasos observados";
+      }),
+      sendWebhookNotification: vi.fn().mockImplementation(async (payload) => {
+        capturedWebhookPayload = payload;
+        return { success: true, attempts: 1 };
+      }),
+    };
+
+    const aiClients = createAiClients({
+      whisperUrl: "http://localhost:8000/v1",
+      openRouterApiKey: "dummy-key",
+    });
+
+    await processJob(job, {
+      databaseService,
+      aiClients,
+      tempDir: tempBaseDir,
+      services: mockServices,
+    });
+
+    expect((capturedVisionOptions as { analysisPrompt?: string })?.analysisPrompt).toBe("dame los pasos mencionados");
+    expect(capturedWebhookPayload).toMatchObject({
+      jobId: String(job.id),
+      telegramId: "prompt-user",
+      videoUrl: "https://example.com/prompts.mp4",
+      originalPrompt: "Guarda este video y resume los pasos en tejer",
+      analysisPrompt: "dame los pasos mencionados",
+      storagePrompt: "categoria tejer",
+      summary: "Pasos observados",
+    });
+  });
 });
