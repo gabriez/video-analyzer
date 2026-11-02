@@ -64,6 +64,13 @@ export async function analyzeVideoContext(options: VisionAnalysisOptions): Promi
 
   const contentParts: Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> = [];
 
+  if (options.analysisPrompt && options.analysisPrompt.trim().length > 0) {
+    contentParts.push({
+      type: "text",
+      text: `User Analysis Request:\n"""\n${options.analysisPrompt.trim()}\n"""\n\nPlease prioritize fulfilling the user request above when analyzing the video.\n`,
+    });
+  }
+
   if (options.transcription && options.transcription.trim().length > 0) {
     contentParts.push({
       type: "text",
